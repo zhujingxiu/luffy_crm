@@ -1,0 +1,191 @@
+{% extends 'layout.html' %}
+{% load staticfiles %}
+{% load xstark %}
+{% block css %}
+    <link rel="stylesheet" href="{% static 'xstark/plugins/layer/skin/layer.css' %} "/>
+    <style>
+        .list-tools {
+            padding: 5px 0;
+            margin-left: 15px;
+            margin-right: 15px;
+            overflow: hidden;
+        }
+
+        .list-tools::before, .list-tools::after {
+            content: " ";
+            display: table;
+        }
+        .list-tools .button-list, .list-tools .search-list{
+            clear: both;
+            margin-bottom: 10px;
+        }
+        .pagination {
+            margin: 0;
+        }
+
+        .btn-addon {
+            border: none;
+            background: none;
+        }
+
+        .tool-block {
+            margin: 5px -5px;
+        }
+
+        .comb-search .filter-item .allof {
+            width: 60px;
+            float: left;
+        }
+
+        .comb-search .filter-item .others {
+            padding-left: 50px;
+        }
+
+        .comb-search .filter-item a {
+            display: inline-block;
+            padding: 5px 8px;
+            margin: 3px;
+            border: 1px solid #d4d4d4;
+            border-radius: 3px;
+        }
+
+        .comb-search a.active {
+            color: #fff;
+            background-color: #337ab7;
+            border-color: #2e6da4;
+        }
+    </style>
+{% endblock %}
+{% block content %}
+    <h3>{{ msg }}</h3>
+    <div class="list-tools well">
+        {% if  cl.gen_list_filters %}
+            <div class="comb-search col-sm-8 tool-block">
+                {% for row in cl.gen_list_filter_rows %}
+                    <div class="filter-item">
+                        {% for obj in row %}
+                            {{ obj|safe }}
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="col-sm-4 tool-block">
+            {% if cl.add_button %}
+                <div class="button-list pull-right btn-group">
+                    {{ cl.add_button }}
+                </div>
+            {% endif %}
+
+            {% if cl.search_list %}
+                <div class="search-list pull-right">
+                    <form class="form-inline">
+                        <div class="form-group">
+                            <div class="input-group">
+                                <input type="text" class="form-control" name="q" value="{{ cl.q }}">
+                                <span class="btn-primary input-group-addon">
+                                <button type="submit" class="btn-addon"><i class="fa fa-search"></i> 搜索</button>
+                                </span>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    <form method="post" class="form-inline" id="form-list">
+        {% csrf_token %}
+        <div class="col-sm-5">
+            <div class="form-group" style="margin-bottom: 5px;">
+                <div class="input-group">
+                    <select name="action" class="form-control">
+                        <option value=""> -- 请选择要执行的操作 --</option>
+                        {% for action in cl.action_list %}
+                            <option value="{{ action.name }}">{{ action.text }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="btn-primary input-group-addon">
+                        <button type="button" id="action-running" class="btn-addon">执行</button>
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-7">
+            <ul class="pagination pull-right">
+                {{ cl.page.pager_simple|safe }}
+            </ul>
+        </div>
+        <div class="col-sm-12">
+            {% table cl %}
+            <div class="text-center">
+                <ul class="pagination">
+                    {{ cl.page.page_html|safe }}
+                </ul>
+            </div>
+        </div>
+    </form>
+{% endblock %}
+{% block js %}
+    <script src="{% static 'xstark/plugins/layer/layer.js' %} "></script>
+    <script src="{% static 'xstark/js/jquery.form.js' %} "></script>
+    <script>
+        $('#action-running').click(function () {
+            var form = $('#form-list');
+            var action = form.find('[name=action]').val();
+            if (!action) {
+                layer.msg('请选择一个操作', {icon: 5});
+                return false;
+            }
+
+            form.ajaxSubmit({
+                type: 'post',
+                dataType: 'json',
+                beforeSubmit: function () {
+                    layer.load();
+                },
+                success: function (json) {
+                    if (json.errcode == 0) {
+                        if (json.tpl) {
+                            layer.closeAll('loading');
+                            layer.open({
+                                'title': json.title,
+                                'content': json.tpl,
+                                'area': '600px',
+                                'btn': false
+                            })
+                        } else {
+                            layer.msg(json.msg);
+                        }
+                    } else {
+                        layer.msg(json.msg, {icon: 5});
+                        layer.closeAll('loading');
+                    }
+                }
+            })
+        })
+        $('#id-all').click(function () {
+            var clicked = $(this).prop('checked');
+            $.each($('input[name="pk"]'), function () {
+                $(this).prop('checked', clicked)
+            })
+        });
+        $('._list-del').click(function () {
+            var url = $(this).data('href');
+            $.getJSON(url, {_t: Math.random()}, function (json) {
+                layer.load();
+                if (json.errcode == 0) {
+                    layer.open({
+                        'title': json.title,
+                        'content': json.tpl,
+                        'area': '600px',
+                        'btn': false
+                    })
+                } else {
+                    layer.msg(json.msg, {icon: 5});
+                }
+                layer.closeAll('loading');
+            })
+        })
+    </script>
+{% endblock %}
