@@ -4,11 +4,11 @@
 # _DATE_    : 2018/9/12
 import functools
 from types import FunctionType
+from django.forms import ModelForm
 from django.utils.safestring import mark_safe
+from django.template.loader import render_to_string
 from django.shortcuts import render, reverse, HttpResponse, redirect
 from django.db.models.fields.related import ForeignKey, ManyToManyField
-from django.forms import ModelForm
-from django.template.loader import render_to_string
 from .utils.response import XStarkErrorResponse, XStarkSuccessResponse
 
 
@@ -19,6 +19,7 @@ def get_choice_text(field, head=None):
     :param head: 表头名称
     :return:
     """
+
     def inner(self, entity=None, header=False):
         try:
             model_field = self.admin_model._meta.get_field(field)
@@ -33,6 +34,7 @@ def get_choice_text(field, head=None):
         if header:
             return head if head else model_field.verbose_name
         return getattr(entity_obj, func_name)()
+
     return inner
 
 
@@ -184,7 +186,13 @@ class ChangeList(object):
                     if isinstance(field, FunctionType):
                         row.append(field(self.site, entity=item))
                     else:
-                        row.append(getattr(item, field))
+                        model_field = self.get_model_field(field)
+
+                        if isinstance(model_field, ManyToManyField):
+                            _all_related = getattr(getattr(item, field), 'all')()
+                            row.append([_related for _related in _all_related])
+                        else:
+                            row.append(getattr(item, field))
             yield row
 
 
@@ -195,10 +203,14 @@ class StarkAdminModel(object):
     search_list = []
     filter_list = []
     model_form_class = None
+    display_option = True
+    has_bulk_delete = True
+    request_get_key = 'xstark_get'
 
-    def __init__(self, model_cls, site_cls):
+    def __init__(self, model_cls, site_cls, prefix=None):
         self.admin_model = model_cls
         self.admin_site = site_cls
+        self.prefix = prefix
         self.request = None
 
     def bulk_delete(self, request):
@@ -209,7 +221,10 @@ class StarkAdminModel(object):
     bulk_delete.text = '批量删除'
 
     def get_action_list(self):
-        actions = [self.bulk_delete]
+
+        actions = []
+        if self.has_bulk_delete:
+            actions.append(self.bulk_delete)
         actions.extend(self.action_list)
         return actions
 
@@ -254,21 +269,23 @@ class StarkAdminModel(object):
     def wrapper(self, func):
         @functools.wraps(func)
         def inner(request, *args, **kwargs):
+            if request.GET:
+                # request.session[self.request_get_key] = request.GET.copy()
+                request.session[self.request_get_key] = request.GET.urlencode()
+                # print(self.request_get_key, request.session.get(self.request_get_key), type(request.session.get(self.request_get_key)))
             self.request = request
+            # print('wrapper session:', self.request.session.get(self.request_get_key), type(self.request.session.get(self.request_get_key)))
             return func(request, *args, **kwargs)
 
         return inner
 
     def get_urls(self):
+        from django.urls import path
 
-        from django.urls import path, re_path
-
-        info = self.admin_model._meta.app_label, self.admin_model._meta.model_name
-
-        urlpatterns = [path('', self.wrapper(self.changelist_view), name='%s_%s_changelist' % info),
-                       path('add/', self.wrapper(self.add_view), name='%s_%s_add' % info),
-                       path('<path:entity_id>/delete/', self.wrapper(self.delete_view), name='%s_%s_delete' % info),
-                       path('<path:entity_id>/change/', self.wrapper(self.change_view), name='%s_%s_change' % info), ]
+        urlpatterns = [path('', self.wrapper(self.changelist_view), name=self.get_list_url_name),
+                       path('add/', self.wrapper(self.add_view), name=self.get_add_url_name),
+                       path('<path:entity_id>/delete/', self.wrapper(self.delete_view), name=self.get_del_url_name),
+                       path('<path:entity_id>/change/', self.wrapper(self.change_view), name=self.get_change_url_name), ]
 
         extra_urls = self.extra_urls()
 
@@ -291,7 +308,7 @@ class StarkAdminModel(object):
         display = []
         display.append(StarkAdminModel.display_checkbox)
         display.extend(self.list_display)
-        if StarkAdminModel.display_edit not in display and StarkAdminModel.display_delete not in display:
+        if StarkAdminModel.display_edit not in display and StarkAdminModel.display_delete not in display and self.display_option:
             display.append(StarkAdminModel.display_options)
         return display
 
@@ -349,24 +366,60 @@ class StarkAdminModel(object):
             return mark_safe('操作')
         return mark_safe('''
             <a href="%s" class="btn btn-info btn-sm"><i class="fa fa-edit"></i> 编辑</a>
-            <a data-href="%s" data-pk="%s" class="btn btn-danger btn-sm _list-del"><i class="fa fa-trash"></i> 删除</a>
-            ''' % (self.reverse_display_edit(entity=entity), self.reverse_display_delete(entity=entity), entity.pk))
+            <a data-href="%s" class="btn btn-danger btn-sm _list-del"><i class="fa fa-trash"></i> 删除</a>
+            ''' % (self.reverse_display_edit(entity=entity), self.reverse_display_delete(entity=entity)))
 
     def reverse_display_list(self):
-        info = self.admin_site.namespace, self.admin_model._meta.app_label, self.admin_model._meta.model_name
-        return reverse('%s:%s_%s_changelist' % info)
+        return reverse('%s:%s' % (self.admin_site.namespace, self.get_list_url_name))
 
     def reverse_display_add(self):
-        info = self.admin_site.namespace, self.admin_model._meta.app_label, self.admin_model._meta.model_name
-        return reverse('%s:%s_%s_add' % info)
+        return reverse('%s:%s' % (self.admin_site.namespace, self.get_add_url_name))
 
     def reverse_display_edit(self, entity):
-        info = self.admin_site.namespace, self.admin_model._meta.app_label, self.admin_model._meta.model_name
-        return reverse('%s:%s_%s_change' % info, kwargs={'entity_id': entity.pk})
+        return reverse('%s:%s' % (self.admin_site.namespace, self.get_change_url_name), kwargs={'entity_id': entity.pk})
 
     def reverse_display_delete(self, entity):
-        info = self.admin_site.namespace, self.admin_model._meta.app_label, self.admin_model._meta.model_name
-        return reverse('%s:%s_%s_delete' % info, kwargs={'entity_id': entity.pk})
+        return reverse('%s:%s' % (self.admin_site.namespace, self.get_del_url_name), kwargs={'entity_id': entity.pk})
+
+    @property
+    def get_list_url_name(self):
+        app_label = self.admin_model._meta.app_label
+        model_name = self.admin_model._meta.model_name
+        if self.prefix:
+            name = '%s_%s_%s_changelist' % (app_label, model_name, self.prefix)
+        else:
+            name = '%s_%s_changelist' % (app_label, model_name)
+        return name
+
+    @property
+    def get_add_url_name(self):
+        app_label = self.admin_model._meta.app_label
+        model_name = self.admin_model._meta.model_name
+        if self.prefix:
+            name = '%s_%s_%s_add' % (app_label, model_name, self.prefix)
+        else:
+            name = '%s_%s_add' % (app_label, model_name)
+        return name
+
+    @property
+    def get_change_url_name(self):
+        app_label = self.admin_model._meta.app_label
+        model_name = self.admin_model._meta.model_name
+        if self.prefix:
+            name = '%s_%s_%s_change' % (app_label, model_name, self.prefix)
+        else:
+            name = '%s_%s_change' % (app_label, model_name)
+        return name
+
+    @property
+    def get_del_url_name(self):
+        app_label = self.admin_model._meta.app_label
+        model_name = self.admin_model._meta.model_name
+        if self.prefix:
+            name = '%s_%s_%s_delete' % (app_label, model_name, self.prefix)
+        else:
+            name = '%s_%s_delete' % (app_label, model_name)
+        return name
 
     def get_model_form(self):
 
@@ -384,17 +437,19 @@ class StarkAdminModel(object):
         form.save()
 
     def add_view(self, request):
+        print('add_view', self.request.session.get(self.request_get_key), type(self.request.session.get(self.request_get_key)))
+        msg = '{0} : add_view for {1}'.format(self.admin_model._meta.verbose_name, self.admin_model._meta.app_label)
+        list_url = self.reverse_display_list()
         model_from = self.get_model_form()
+        form = model_from()
         if request.method == 'POST':
             form = model_from(request.POST)
             if form.is_valid():
                 self.save(form)
+                return redirect(self.reverse_display_list())
             else:
                 print(form.errors)
-            return redirect(self.reverse_display_list())
-        msg = '{0} : add_view for {1}'.format(self.admin_model._meta.verbose_name, self.admin_model._meta.app_label)
-        list_url = self.reverse_display_list()
-        return render(request, 'xstark/change.html', {'form': model_from(), 'list_url': list_url, 'msg': msg})
+        return render(request, 'xstark/change.html', {'form': form, 'list_url': list_url, 'msg': msg})
 
     def delete_view(self, request, entity_id):
         entity = self.admin_model.objects.filter(pk=entity_id).first()
@@ -404,11 +459,12 @@ class StarkAdminModel(object):
         if request.method == 'POST':
             entity.delete()
             return XStarkSuccessResponse('{%s} 已删除' % entity, redirect=link).json()
-        return XStarkSuccessResponse(title='删除%s'%self.admin_model._meta.verbose_name,
+        return XStarkSuccessResponse(title='删除%s' % self.admin_model._meta.verbose_name,
                                      tpl=render_to_string('xstark/delete.html', {'redirect': link, 'entity': entity},
                                                           request=request)).json()
 
     def change_view(self, request, entity_id):
+        print(self.request.session.get(self.request_get_key), type(self.request.session.get(self.request_get_key)))
         entity = self.admin_model.objects.filter(pk=entity_id).first()
         if not entity:
             return XStarkErrorResponse('不存在').json()
@@ -436,20 +492,24 @@ class StarkAdminSite(object):
         urlpatterns = []
         for item in self._registry:
             if item.prefix:
-                urlpatterns.append(path('%s/%s/%s/' % (item.model._meta.app_label, item.model._meta.model_name, item.prefix), include(item.site.urls)))
+                tmp = path('%s/%s/%s/' % (item.model._meta.app_label, item.model._meta.model_name, item.prefix),
+                           include(item.site.urls))
             else:
-                urlpatterns.append(path('%s/%s/' % (item.model._meta.app_label, item.model._meta.model_name), include(item.site.urls)))
+
+                tmp = path('%s/%s/' % (item.model._meta.app_label, item.model._meta.model_name),
+                           include(item.site.urls))
+            urlpatterns.append(tmp)
         return urlpatterns
 
     @property
     def urls(self):
         return self.get_urls(), self.app_code, self.namespace
 
-    def register(self, model_class, admin_model_cls=None, prefix=None):
+    def register(self, model_cls, admin_model_cls=None, prefix=None):
         if not admin_model_cls:
             admin_model_cls = StarkAdminModel
 
-        self._registry.append(SiteMapping(model_class, admin_model_cls(model_class, self), prefix))
+        self._registry.append(SiteMapping(model_cls, admin_model_cls(model_cls, self, prefix), prefix))
 
 
 site = StarkAdminSite()

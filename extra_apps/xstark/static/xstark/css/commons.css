@@ -1,6 +1,7 @@
-body{
+body {
     margin: 0;
 }
+
 img {
     border: 0;
 }
@@ -13,19 +14,22 @@ img {
     float: right;
 }
 
-.font-16{
+.font-16 {
     font-size: 16px !important;
 }
+
 .clearfix:after {
     clear: both;
     display: block;
     visibility: hidden;
     height: 0;
 }
+
 .bg-danger {
     background-color: #d9534f !important;
     color: #ffffff;
 }
+
 .bg-success {
     background-color: #5cb85c !important;
     color: #ffffff;
@@ -45,6 +49,27 @@ img {
     background-color: #777;
     border-radius: 10px;
 }
+
 .img-circle {
     border-radius: 50%;
+}
+
+._action-confirm ._selected-options {
+    padding: 5px 0;
+    font-weight: 500;
+}
+
+._action-confirm ._selected {
+    text-align: center;
+    display: inline-block;
+    border: 1px dashed #c0c0c0;
+    min-width: 60px;
+    background: #c4e3f3
+}
+
+.form-group span.help-tips {
+    display: block;
+    padding-top: 5px;
+    color: #a94442;
+    text-align: right;
 }

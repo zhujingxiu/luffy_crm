@@ -28,9 +28,22 @@ class Customer(models.Model):
     source = models.SmallIntegerField('客户来源', choices=SOURCES, default=1)
     referral_from = models.ForeignKey('self', blank=True, null=True, verbose_name="转介绍自学员", on_delete=models.SET_NULL,
         help_text="若此客户是转介绍自内部学员,请在此处选择内部学员姓名", related_name="internal_referral", )
-    course = models.ManyToManyField(Course, verbose_name="咨询课程")
+    course = models.ManyToManyField(Course, verbose_name="咨询课程", related_name='courses')
     consultant = models.ForeignKey(UserInfo, on_delete=models.SET_NULL, verbose_name="课程顾问", related_name='consultant',
                                    null=True, blank=True, limit_choices_to={'depart__code': 'marketing'})
+
+    date = models.DateField("咨询日期", auto_now_add=True)
+    last_consult_date = models.DateField("最后跟进日期", auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = verbose_name = '客户管理'
+
+    def __str__(self):
+        return self.name
+
+
+class CustomerInfo(models.Model):
+    customer = models.OneToOneField(Customer, on_delete=models.CASCADE, verbose_name='客户主ID')
     EDUCATIONS = (
         (1, '重点大学'),
         (2, '普通本科'),
@@ -57,16 +70,9 @@ class Customer(models.Model):
     work_status = models.IntegerField("职业状态", choices=((1, '在职'), (2, '无业')), default=1, blank=True, null=True)
     company = models.CharField("目前就职公司", max_length=64, blank=True, null=True)
     salary = models.CharField("当前薪资", max_length=64, blank=True, null=True)
-    date = models.DateField("咨询日期", auto_now_add=True)
-    last_consult_date = models.DateField("最后跟进日期", auto_now_add=True)
-
-    class Meta:
-        verbose_name_plural = verbose_name = '客户管理'
-
     def __str__(self):
         # return "姓名:{0},联系方式:{1}".format(self.name, self.qq, )
-        return self.name
-
+        return self.customer.name
 
 class ConsultRecord(models.Model):
     """

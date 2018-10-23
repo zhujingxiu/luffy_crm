@@ -26,22 +26,17 @@ class UserForm(forms.ModelForm):
 
 
 class UserAdmin(StarkAdminModel):
-    def display_roles(self, entity=None, header=False):
-        if header:
-            return self.admin_model._meta.get_field('roles').verbose_name
 
-        return ', '.join([item.title or '' for item in entity.roles.all()])
-
-    list_display = ['name', get_choice_text('gender'), 'phone', 'depart', display_roles, 'email']
+    list_display = ['name', get_choice_text('gender'), 'phone', 'depart', 'roles', 'email']
     model_form_class = UserForm
 
     def extra_urls(self):
         from django.urls import path
         return [
-            path('reset/', self.wrapper(self.reset_pwd), name='system_userinfo_reset'),
+            path('reset/', self.wrapper(self.bulk_reset), name='system_userinfo_reset'),
         ]
 
-    def reset_pwd(self, request):
+    def bulk_reset(self, request):
         from django.contrib.auth.hashers import make_password
         pks = request.POST.get('pks')
         if not pks:
@@ -51,7 +46,7 @@ class UserAdmin(StarkAdminModel):
         UserInfo.objects.filter(pk__in=pks.split(',')).update(password=new_pwd)
         return XStarkSuccessResponse(new_pwd).json()
 
-    def bulk_reset(self, request):
+    def bulk_reset_view(self, request):
         entities = request.POST.getlist('pk')
         if not request.POST.getlist('pk'):
             return XStarkErrorResponse('请选择一项').json()
@@ -60,8 +55,8 @@ class UserAdmin(StarkAdminModel):
             'users': UserInfo.objects.filter(pk__in=entities).values('name')
         }, request=request), title='将为%s位用户重置密码' % len(entities)).json()
 
-    bulk_reset.text = '重置默认密码'
-    action_list = [bulk_reset]
+    bulk_reset_view.text = '重置默认密码'
+    action_list = [bulk_reset_view]
     filter_list = [
         Option('gender', is_choice=True),
         Option('depart', is_multi=True),

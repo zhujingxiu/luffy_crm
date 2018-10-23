@@ -61,7 +61,7 @@
     <div class="list-tools well">
         {% if  cl.gen_list_filters %}
             <div class="comb-search col-sm-8 tool-block">
-                {% for row in cl.gen_list_filter_rows %}
+                {% for row in cl.gen_list_filters %}
                     <div class="filter-item">
                         {% for obj in row %}
                             {{ obj|safe }}

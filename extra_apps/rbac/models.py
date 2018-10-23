@@ -40,7 +40,7 @@ class Role(models.Model):
     """
     title = models.CharField('角色名称', max_length=32)
     code = models.CharField('唯一标识', max_length=16, blank=True)
-    permissions = models.ManyToManyField(Permission, verbose_name='拥有的所有权限', blank=True)
+    permissions = models.ManyToManyField(Permission, verbose_name='拥有的所有权限', blank=True, related_name='permissions')
 
     class Meta:
         verbose_name_plural = verbose_name = '角色管理'

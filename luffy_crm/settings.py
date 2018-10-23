@@ -152,3 +152,5 @@ PERMISSION_VALID_URL = [
     '/login/',
     '/admin/.*',
 ]
+
+MAX_PRIVATE_CUSTOMER = 150

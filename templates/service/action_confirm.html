@@ -1,0 +1,41 @@
+
+<form role="form" action="{{ action }}" method="POST" novalidate="NOVALIDATE" class="_action-confirm">
+    {% csrf_token %}
+    <div class="panel panel-default">
+        <div class="panel-body">
+            <div class="_selected-options">
+            {% for item in entities %}
+            <span class="_selected"> {{ item }}  </span>
+            {% endfor %}
+            </div>
+            <input type="hidden" name="pks" value="{{ pks }}">
+        </div>
+        <div class="panel-footer">
+            <div class="buttons">
+                <a class="btn btn-primary" id="form-sub"><i class="fa fa-save"></i> {{ submit_text }}</a>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+    $('#form-sub').click(function () {
+        $(this).closest("form").ajaxSubmit({
+            dataType: 'json',
+            beforeSubmit: function () {
+                layer.load();
+            },
+            success: function (json) {
+                console.log(json);
+                layer.closeAll('loading');
+                if (json.errcode == 0) {
+                    layer.msg(json.msg, function () {
+                        location.reload()
+                    })
+                }else{
+                    layer.msg(json.msg, {icon:5})
+                }
+            }
+        })
+    })
+</script>
