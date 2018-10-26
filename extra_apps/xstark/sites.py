@@ -24,22 +24,25 @@ def get_choice_text(field, head=None):
         try:
             model_field = self.admin_model._meta.get_field(field)
             func_name = "get_%s_display" % field
-            entity_obj = entity
+            _related_field = False
         except:
-            _relate_field, _field = field.split('__')
-            _relate_cls = self.site.admin_model._meta.get_field(_relate_field).related_model
+            _related_field, _field = field.split('__')
+            _relate_cls = self.admin_model._meta.get_field(_related_field).related_model
             model_field = _relate_cls._meta.get_field(_field)
             func_name = "get_%s_display" % _field
-            entity_obj = getattr(entity, _relate_field)
         if header:
-            return head if head else model_field.verbose_name
-        return getattr(entity_obj, func_name)()
+            return head or model_field.verbose_name
+        try:
+            entity_obj = entity if not _related_field else getattr(entity, _related_field)
+        except:
+            return ''
+        else:
+            return getattr(entity_obj, func_name)()
 
     return inner
 
 
 class SiteMapping(object):
-
     def __init__(self, model, site, prefix):
         self.model = model
         self.site = site
@@ -47,7 +50,7 @@ class SiteMapping(object):
 
 
 class Row(object):
-    def __init__(self, data_list, option, query_dict):
+    def __init__(self, data_list, option, query_dict, verbose_name=None):
         """
         元组
         :param data_list:元组或queryset
@@ -55,19 +58,19 @@ class Row(object):
         self.data_list = data_list
         self.option = option
         self.query_dict = query_dict
+        self.verbose_name = verbose_name
 
     def __iter__(self):
         yield '<div class="allof">'
 
         total_query_dict = self.query_dict.copy()
         total_query_dict._mutable = True
-
         origin_value_list = self.query_dict.getlist(self.option.field)  # [2,]
         if origin_value_list:
             total_query_dict.pop(self.option.field)
-            yield '<a href="?%s">全部</a>' % (total_query_dict.urlencode(),)
+            yield '<a href="?%s">全部 %s</a>' % (total_query_dict.urlencode(), self.verbose_name)
         else:
-            yield '<a class="active" href="?%s">全部</a>' % (total_query_dict.urlencode(),)
+            yield '<a class="active" href="?%s">全部 %s</a>' % (total_query_dict.urlencode(), self.verbose_name)
 
         yield '</div>'
         yield '<div class="others">'
@@ -102,7 +105,7 @@ class Row(object):
 
 
 class Option(object):
-    def __init__(self, field, condition=None, is_choice=False, is_multi=False, text_func=None, value_func=None):
+    def __init__(self, field, condition=None, is_choice=False, is_multi=False, text_func=None, value_func=None, verbose_name=None):
         self.field = field
         self.is_choice = is_choice
         if not condition:
@@ -111,15 +114,17 @@ class Option(object):
         self.is_multi = is_multi
         self.text_func = text_func
         self.value_func = value_func
+        self.verbose_name = verbose_name
 
     def get_queryset(self, _field, model_class, query_dict):
+        verbose = self.verbose_name or _field.verbose_name
         if isinstance(_field, ForeignKey) or isinstance(_field, ManyToManyField):
-            row = Row(_field.related_model.objects.filter(**self.condition), self, query_dict)
+            row = Row(_field.related_model.objects.filter(**self.condition), self, query_dict, verbose_name=verbose)
         else:
             if self.is_choice:
-                row = Row(_field.choices, self, query_dict)
+                row = Row(_field.choices, self, query_dict, verbose_name=verbose)
             else:
-                row = Row(model_class.objects.filter(**self.condition), self, query_dict)
+                row = Row(model_class.objects.filter(**self.condition), self, query_dict, verbose_name=verbose)
         return row
 
     def get_text(self, item):
@@ -187,7 +192,6 @@ class ChangeList(object):
                         row.append(field(self.site, entity=item))
                     else:
                         model_field = self.get_model_field(field)
-
                         if isinstance(model_field, ManyToManyField):
                             _all_related = getattr(getattr(item, field), 'all')()
                             row.append([_related for _related in _all_related])
@@ -207,11 +211,24 @@ class StarkAdminModel(object):
     has_bulk_delete = True
     request_get_key = 'xstark_get'
 
+    admin_title = ''
+
     def __init__(self, model_cls, site_cls, prefix=None):
         self.admin_model = model_cls
         self.admin_site = site_cls
         self.prefix = prefix
         self.request = None
+
+    def get_site_title(self):
+        return self.admin_model._meta.verbose_name
+
+    @property
+    def site_app(self):
+        return self.admin_model._meta.app_label
+
+    @property
+    def site_model(self):
+        return self.admin_model._meta.model_name
 
     def bulk_delete(self, request):
         pk_ids = request.POST.getlist('pk')
@@ -221,7 +238,6 @@ class StarkAdminModel(object):
     bulk_delete.text = '批量删除'
 
     def get_action_list(self):
-
         actions = []
         if self.has_bulk_delete:
             actions.append(self.bulk_delete)
@@ -338,9 +354,7 @@ class StarkAdminModel(object):
 
         queryset = self.get_queryset().filter(condition).filter(**self.get_filter_condition()).order_by(
             *self.get_order_by()).distinct()[page.start:page.end]
-        msg = '{0} : changelist_view for {1}'.format(self.admin_model._meta.verbose_name,
-                                                     self.admin_model._meta.app_label)
-        context = {'cl': ChangeList(self, queryset, q, search_list, page), 'msg': msg}
+        context = {'cl': ChangeList(self, queryset, q, search_list, page), 'site_title': self.get_site_title()}
         return render(request, 'xstark/changelist.html', context)
 
     def display_add(self):
@@ -383,45 +397,37 @@ class StarkAdminModel(object):
 
     @property
     def get_list_url_name(self):
-        app_label = self.admin_model._meta.app_label
-        model_name = self.admin_model._meta.model_name
         if self.prefix:
-            name = '%s_%s_%s_changelist' % (app_label, model_name, self.prefix)
+            name = '%s_%s_%s_changelist' % (self.site_app, self.site_model, self.prefix)
         else:
-            name = '%s_%s_changelist' % (app_label, model_name)
+            name = '%s_%s_changelist' % (self.site_app, self.site_model)
         return name
 
     @property
     def get_add_url_name(self):
-        app_label = self.admin_model._meta.app_label
-        model_name = self.admin_model._meta.model_name
         if self.prefix:
-            name = '%s_%s_%s_add' % (app_label, model_name, self.prefix)
+            name = '%s_%s_%s_add' % (self.site_app, self.site_model, self.prefix)
         else:
-            name = '%s_%s_add' % (app_label, model_name)
+            name = '%s_%s_add' % (self.site_app, self.site_model)
         return name
 
     @property
     def get_change_url_name(self):
-        app_label = self.admin_model._meta.app_label
-        model_name = self.admin_model._meta.model_name
         if self.prefix:
-            name = '%s_%s_%s_change' % (app_label, model_name, self.prefix)
+            name = '%s_%s_%s_change' % (self.site_app, self.site_model, self.prefix)
         else:
-            name = '%s_%s_change' % (app_label, model_name)
+            name = '%s_%s_change' % (self.site_app, self.site_model)
         return name
 
     @property
     def get_del_url_name(self):
-        app_label = self.admin_model._meta.app_label
-        model_name = self.admin_model._meta.model_name
         if self.prefix:
-            name = '%s_%s_%s_delete' % (app_label, model_name, self.prefix)
+            name = '%s_%s_%s_delete' % (self.site_app, self.site_model, self.prefix)
         else:
-            name = '%s_%s_delete' % (app_label, model_name)
+            name = '%s_%s_delete' % (self.site_app, self.site_model)
         return name
 
-    def get_model_form(self):
+    def get_model_form(self, request=None):
 
         if self.model_form_class:
             return self.model_form_class
@@ -433,23 +439,39 @@ class StarkAdminModel(object):
 
         return EntityModelForm
 
-    def save(self, form, motify=False):
-        form.save()
+    def save(self, form, modify=False):
+        entity = form.save()
+        return entity
+
+    def get_form_instance(self, data=None, instance=None, request=None):
+        form = self.get_model_form(request=request)
+        return form(data=data, instance=instance)
 
     def add_view(self, request):
-        print('add_view', self.request.session.get(self.request_get_key), type(self.request.session.get(self.request_get_key)))
-        msg = '{0} : add_view for {1}'.format(self.admin_model._meta.verbose_name, self.admin_model._meta.app_label)
         list_url = self.reverse_display_list()
-        model_from = self.get_model_form()
-        form = model_from()
+        form = self.get_form_instance(request=request)
         if request.method == 'POST':
-            form = model_from(request.POST)
+            form = self.get_form_instance(data=request.POST, request=request)
+
             if form.is_valid():
                 self.save(form)
                 return redirect(self.reverse_display_list())
             else:
                 print(form.errors)
-        return render(request, 'xstark/change.html', {'form': form, 'list_url': list_url, 'msg': msg})
+        return render(request, 'xstark/change.html', {'form': form, 'list_url': list_url, 'site_title': self.get_site_title()})
+
+    def change_view(self, request, entity_id):
+        entity = self.admin_model.objects.filter(pk=entity_id).first()
+        if not entity:
+            return XStarkErrorResponse('不存在').json()
+        if request.method == 'POST':
+            form = self.get_form_instance(data=request.POST, instance=entity, request=request)
+            self.save(form,  modify=True)
+            return redirect(self.reverse_display_list())
+        list_url = self.reverse_display_list()
+        form = self.get_form_instance(instance=entity, request=request)
+        return render(request, 'xstark/change.html',
+                      {'form': form, 'list_url': list_url, 'site_title': self.get_site_title()})
 
     def delete_view(self, request, entity_id):
         entity = self.admin_model.objects.filter(pk=entity_id).first()
@@ -459,25 +481,9 @@ class StarkAdminModel(object):
         if request.method == 'POST':
             entity.delete()
             return XStarkSuccessResponse('{%s} 已删除' % entity, redirect=link).json()
-        return XStarkSuccessResponse(title='删除%s' % self.admin_model._meta.verbose_name,
+        return XStarkSuccessResponse(title='删除%s' % self.get_site_title(),
                                      tpl=render_to_string('xstark/delete.html', {'redirect': link, 'entity': entity},
                                                           request=request)).json()
-
-    def change_view(self, request, entity_id):
-        print(self.request.session.get(self.request_get_key), type(self.request.session.get(self.request_get_key)))
-        entity = self.admin_model.objects.filter(pk=entity_id).first()
-        if not entity:
-            return XStarkErrorResponse('不存在').json()
-        model_from = self.get_model_form()
-        if request.method == 'POST':
-            form = model_from(data=request.POST, instance=entity)
-            self.save(form, motify=True)
-            return redirect(self.reverse_display_list())
-        list_url = self.reverse_display_list()
-        msg = '{0} : Entity {1} change_view for {2}'.format(self.admin_model._meta.verbose_name, entity_id,
-                                                            self.admin_model._meta.app_label)
-        return render(request, 'xstark/change.html',
-                      {'form': model_from(instance=entity), 'list_url': list_url, 'msg': msg})
 
 
 class StarkAdminSite(object):

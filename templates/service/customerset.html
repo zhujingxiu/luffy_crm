@@ -23,15 +23,15 @@
 
 {% endblock %}
 {% block content %}
-    <div class="col-sm-6">
-        <form class="change" method="post">
-            {% csrf_token %}
-            <div class="panel panel-default">
+    <form class="change" method="post">
+    {% csrf_token %}
+        <div class="col-sm-6">
+            <div class="panel panel-primary">
                 <div class="panel-heading">
                     <div class="pull-right">
                         <a href="{{ list_url }}" class="btn btn-default btn-sm">返回</a>
                     </div>
-                    <h5>{{ site_title }}</h5>
+                    <h5>{{ msg }}</h5>
                 </div>
                 <div class="panel-body">
                     {% for filed in form %}
@@ -46,6 +46,21 @@
                     <button type="submit" class="btn btn-primary">保存</button>
                 </div>
             </div>
-        </form>
-    </div>
+        </div>
+        <div class="col-sm-5">
+            <div class="panel panel-default">
+                <div class="panel-heading">客户信息</div>
+                <div class="panel-body">
+                    {% for filed in info_form %}
+                        <div class="form-group">
+                            <label>{{ filed.label }}</label>
+                            {{ filed }}
+                            <span class="help-tips">{{ filed.errors.0 }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+    </form>
 {% endblock %}

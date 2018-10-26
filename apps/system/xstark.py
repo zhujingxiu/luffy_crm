@@ -60,7 +60,7 @@ class UserAdmin(StarkAdminModel):
     filter_list = [
         Option('gender', is_choice=True),
         Option('depart', is_multi=True),
-        Option('roles', is_multi=True),
+        Option('roles', is_multi=True, verbose_name='角色'),
     ]
     search_list = ['name', 'phone']
 
@@ -75,12 +75,26 @@ class CollegeAdmin(StarkAdminModel):
 site.register(College, CollegeAdmin)
 
 
+class ClassForm(forms.ModelForm):
+    class Meta:
+        model = ClassInfo
+        exclude = ['admin']
+
+
 class ClassAdmin(StarkAdminModel):
-    list_display = ['title', 'openday', 'tutor', 'college']
+    list_display = ['title', 'semester','openday', 'tutor', 'college']
 
     filter_list = [
-        'college'
+        'college',
+        'course'
     ]
+    model_form_class = ClassForm
+
+    def save(self, form, motify=False):
+        if not motify:
+            current_user_id = 1
+            form.instance.admin = UserInfo.objects.get(pk=current_user_id)
+        form.save()
 
 
 site.register(ClassInfo, ClassAdmin)

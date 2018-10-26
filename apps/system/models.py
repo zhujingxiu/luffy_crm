@@ -90,4 +90,4 @@ class ClassInfo(models.Model):
         verbose_name_plural = verbose_name = '班级管理'
 
     def __str__(self):
-        return self.title
+        return "%s%s期" % (self.title, self.semester)

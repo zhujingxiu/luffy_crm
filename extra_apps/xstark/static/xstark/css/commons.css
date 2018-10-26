@@ -54,6 +54,61 @@ img {
     border-radius: 50%;
 }
 
+.list-tools {
+    padding: 5px 0;
+    margin-left: 15px;
+    margin-right: 15px;
+    overflow: hidden;
+}
+
+.list-tools::before, .list-tools::after {
+    content: " ";
+    display: table;
+}
+
+.list-tools .button-list, .list-tools .search-list {
+    clear: both;
+    margin-bottom: 10px;
+}
+
+.pagination {
+    margin: 0;
+}
+
+.btn-addon {
+    border: none;
+    background: none;
+}
+
+.tool-block {
+    margin: 5px -5px;
+}
+
+.comb-search .filter-item .allof {
+    min-width: 60px;
+    float: left;
+    max-width: 150px;
+    overflow: hidden;
+}
+
+.comb-search .filter-item .others {
+    padding-left: 50px;
+}
+
+.comb-search .filter-item a {
+    display: inline-block;
+    padding: 5px 8px;
+    margin: 3px;
+    border: 1px solid #d4d4d4;
+    border-radius: 3px;
+}
+
+.comb-search a.active {
+    color: #fff;
+    background-color: #337ab7;
+    border-color: #2e6da4;
+}
+
 ._action-confirm ._selected-options {
     padding: 5px 0;
     font-weight: 500;
@@ -72,4 +127,38 @@ img {
     padding-top: 5px;
     color: #a94442;
     text-align: right;
+}
+fieldset{
+    border: 1px dashed #c4e3f3;
+    padding: 8px;
+    margin: 10px 0 5px;
+}
+fieldset > legend{
+    margin-bottom:5px;
+    font-size: 16px;
+    padding-left: 5px;
+    padding-bottom: 5px;
+    border-bottom: 1px dashed #c4e3f3;
+}
+
+.xstark-checkbox > li {
+    position: relative;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    display: block;
+    list-style: none;
+    padding: 0;
+}
+.xstark-checkbox > li >label{
+
+    min-height: 20px;
+    padding-left: 20px;
+    font-weight: 400;
+    cursor: pointer;
+
+}
+.xstark-checkbox > li input[type=checkbox]{
+    position: absolute;
+    height: 18px;
+    box-shadow: none;
 }

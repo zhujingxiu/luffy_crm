@@ -2,11 +2,11 @@
 # -*- coding:utf-8 -*-
 # _AUTHOR_  : zhujingxiu
 # _DATE_    : 2018/10/22
-from service.models import Customer
+from service.models import Customer, CustomerInfo
+from service.forms import CustomerForm, CustomerInfoForm, PublicCustomerForm, PrivateCustomerForm
 from xstark.sites import StarkAdminModel, Option, get_choice_text
 from xstark.utils.response import XStarkSuccessResponse, XStarkErrorResponse
-from django import forms
-from django.shortcuts import reverse
+from django.shortcuts import reverse, redirect, render
 from django.conf import settings
 from django.db import transaction
 from django.utils.safestring import mark_safe
@@ -14,31 +14,46 @@ from django.template.loader import render_to_string
 
 
 class CustomerAdmin(StarkAdminModel):
+
     def display_follow(self, entity=None, header=False):
         if header:
             return '操作'
-
         url = reverse("xstark:service_consultrecord_changelist")
-        return mark_safe("<a href='%s?customer=%s'>跟进记录</a>" % (url, entity.pk,))
+        return mark_safe('''
+        <a href='%s?customer=%s' class="btn btn-default"><i class="fa fa-book"></i> 跟进记录</a>
+        ''' % (url, entity.pk,))
 
-    list_display = ['name', get_choice_text('gender'), get_choice_text('status'), 'course', get_choice_text('source'), display_follow]
+    list_display = ['name', get_choice_text('gender'), get_choice_text('status'), 'course', get_choice_text('source'), get_choice_text('customerinfo__education'), display_follow]
     search_list = ['name', 'phone', 'sns']
     filter_list = [
         Option('gender', is_choice=True),
         Option('source', is_choice=True),
         Option('course', is_multi=True),
+        Option('customerinfo__education', is_choice=True, is_multi=True),
     ]
 
-
-class PublicCustomerModel(forms.ModelForm):
-    class Meta:
-        model = Customer
-        exclude = ['consultant', 'status']
-        error_messages = {
-            'phone': {
-                'unique': '手机号已存在'
-            }
-        }
+    def change_view(self, request, entity_id):
+        list_url = self.reverse_display_list()
+        entity = Customer.objects.filter(pk=entity_id).first()
+        if not entity:
+            return redirect(list_url)
+        msg = '{0} '.format(Customer._meta.verbose_name)
+        form = CustomerForm(instance=entity)
+        info_form = CustomerInfoForm()
+        info_entity = CustomerInfo.objects.filter(customer=entity).first()
+        if info_entity:
+            info_form = CustomerInfoForm(instance=info_entity)
+        if request.method == 'POST':
+            form = CustomerForm(request.POST, instance=entity)
+            info_form = CustomerInfoForm(request.POST, instance=info_entity)
+            if form.is_valid():
+                _customer = self.save(form)
+                info_form.instance.customer = _customer
+                info_form.save()
+                return redirect(self.reverse_display_list())
+            else:
+                print(form.errors)
+        return render(request, 'service/customerset.html', {'form': form, 'info_form': info_form, 'list_url': list_url, 'msg': msg})
 
 
 class PublicCustomerAdmin(StarkAdminModel):
@@ -51,7 +66,7 @@ class PublicCustomerAdmin(StarkAdminModel):
         Option('source', is_choice=True),
         Option('course', is_multi=True),
     ]
-    model_form_class = PublicCustomerModel
+    model_form_class = PublicCustomerForm
 
     def extra_urls(self):
         from django.urls import path
@@ -104,14 +119,7 @@ class PublicCustomerAdmin(StarkAdminModel):
     action_list = [bulk_apply_view, ]
 
     def get_queryset(self):
-
         return self.admin_model.objects.filter(consultant__isnull=True)
-
-
-class PrivateCustomerModel(forms.ModelForm):
-    class Meta:
-        model = Customer
-        exclude = ['consultant', ]
 
 
 class PrivateCustomerAdmin(StarkAdminModel):
@@ -133,7 +141,7 @@ class PrivateCustomerAdmin(StarkAdminModel):
         Option('source', is_choice=True),
         Option('course', is_multi=True),
     ]
-    model_form_class = PrivateCustomerModel
+    model_form_class = PrivateCustomerForm
 
     def get_queryset(self):
         current_user_id = 1

@@ -35,6 +35,7 @@ class Customer(models.Model):
     date = models.DateField("咨询日期", auto_now_add=True)
     last_consult_date = models.DateField("最后跟进日期", auto_now_add=True)
 
+
     class Meta:
         verbose_name_plural = verbose_name = '客户管理'
 
@@ -43,7 +44,7 @@ class Customer(models.Model):
 
 
 class CustomerInfo(models.Model):
-    customer = models.OneToOneField(Customer, on_delete=models.CASCADE, verbose_name='客户主ID')
+    customer = models.OneToOneField(Customer, on_delete=models.CASCADE, verbose_name='客户ID', null=True, blank=True)
     EDUCATIONS = (
         (1, '重点大学'),
         (2, '普通本科'),
@@ -70,9 +71,7 @@ class CustomerInfo(models.Model):
     work_status = models.IntegerField("职业状态", choices=((1, '在职'), (2, '无业')), default=1, blank=True, null=True)
     company = models.CharField("目前就职公司", max_length=64, blank=True, null=True)
     salary = models.CharField("当前薪资", max_length=64, blank=True, null=True)
-    def __str__(self):
-        # return "姓名:{0},联系方式:{1}".format(self.name, self.qq, )
-        return self.customer.name
+
 
 class ConsultRecord(models.Model):
     """
@@ -94,8 +93,7 @@ class PaymentRecord(models.Model):
     customer = models.ForeignKey(Customer, verbose_name="客户", on_delete=models.CASCADE)
     consultant = models.ForeignKey(UserInfo, verbose_name="课程顾问", on_delete=models.CASCADE, help_text="谁签的单就选谁")
     classinfo = models.ForeignKey(ClassInfo, verbose_name="分配班级", on_delete=models.CASCADE, null=True, blank=True)
-    pay_type_choices = [(1, "报名费"), (2, "学费"), (3, "转班"), (4, "退学")]
-    pay_type = models.IntegerField("费用类型", choices=pay_type_choices, default=1)
+    pay_type = models.IntegerField("费用类型", choices=((1, "报名费"), (2, "学费"), (3, "转班"), (4, "退学")), default=1)
     paid_fee = models.IntegerField("金额", default=0)
     status = models.IntegerField('审核', default=1, choices=((1, '未审核'), (2, '已审核'),))
     confirm_date = models.DateTimeField("确认日期", null=True, blank=True)
@@ -131,14 +129,16 @@ class Student(models.Model):
         return self.username
 
 
-class ChangeClass(models.Model):
+class ChangeRecord(models.Model):
     """
     转班记录
     """
+    student = models.OneToOneField(Student, verbose_name='学生信息', on_delete=models.CASCADE)
     origin_class = models.ForeignKey(ClassInfo, verbose_name="原班级", on_delete=models.CASCADE, related_name='x1')
     target_class = models.ForeignKey(ClassInfo, verbose_name="目标班级", on_delete=models.CASCADE, related_name='x2')
     admin = models.ForeignKey(UserInfo, verbose_name='处理人', on_delete=models.CASCADE)
     memo = models.TextField('原因', blank=True)
+    add_date = models.DateTimeField("申请日期", auto_now_add=True, blank=True)
 
     class Meta:
         verbose_name_plural = verbose_name = '转班记录'
@@ -148,7 +148,7 @@ class CourseRecord(models.Model):
     """
     上课记录表
     """
-    class_obj = models.ForeignKey(ClassInfo, verbose_name="班级", on_delete=models.CASCADE)
+    classinfo = models.ForeignKey(ClassInfo, verbose_name="班级", on_delete=models.CASCADE)
     day_num = models.IntegerField("节次", default=1)
     teacher = models.ForeignKey(UserInfo, verbose_name="讲师", on_delete=models.CASCADE)
     date = models.DateField("上课日期", auto_now_add=True)
@@ -162,7 +162,7 @@ class CourseRecord(models.Model):
         verbose_name_plural = verbose_name = '上课记录'
 
     def __str__(self):
-        return "{0} day{1}".format(self.class_obj, self.day_num)
+        return "{0} day{1}".format(self.classinfo, self.day_num)
 
 
 class StudyRecord(models.Model):

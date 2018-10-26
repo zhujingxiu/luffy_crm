@@ -3,11 +3,26 @@
     {% csrf_token %}
     <div class="panel panel-default">
         <div class="panel-body">
-            <div class="_selected-options">
-            {% for item in entities %}
-            <span class="_selected"> {{ item }}  </span>
-            {% endfor %}
-            </div>
+            {% if entities %}
+                <div class="_selected-options">
+                {% for item in entities %}
+                <span class="_selected"> {{ item }}  </span>
+                {% endfor %}
+                </div>
+            {% endif %}
+            {% if entities_set %}
+                {% for option in entities_set %}
+                <fieldset>
+                    <legend>{{ option.title }}</legend>
+                    <div class="_selected-options">
+                    {% for item in option.entities %}
+                    <span class="_selected"> {{ item }}  </span>
+                    {% endfor %}
+                    </div>
+                </fieldset>
+                {% endfor %}
+
+            {% endif %}
             <input type="hidden" name="pks" value="{{ pks }}">
         </div>
         <div class="panel-footer">
