@@ -6,12 +6,13 @@ from .forms import ResetPwdForm
 from .models import *
 from xstark.sites import site, StarkAdminModel, Option, get_choice_text
 from xstark.utils.response import XStarkSuccessResponse, XStarkErrorResponse
+from .rbac import RbacPermission
 from django import forms
 from django.conf import settings
 from django.template.loader import render_to_string
 
 
-class DepartAdmin(StarkAdminModel):
+class DepartAdmin(RbacPermission, StarkAdminModel):
     list_display = ['title']
 
 
@@ -25,7 +26,7 @@ class UserForm(forms.ModelForm):
         exclude = ['password']
 
 
-class UserAdmin(StarkAdminModel):
+class UserAdmin(RbacPermission, StarkAdminModel):
 
     list_display = ['name', get_choice_text('gender'), 'phone', 'depart', 'roles', 'email']
     model_form_class = UserForm
@@ -47,15 +48,17 @@ class UserAdmin(StarkAdminModel):
         return XStarkSuccessResponse(new_pwd).json()
 
     def bulk_reset_view(self, request):
+        from django.urls import reverse
         entities = request.POST.getlist('pk')
         if not request.POST.getlist('pk'):
             return XStarkErrorResponse('请选择一项').json()
         return XStarkSuccessResponse(tpl=render_to_string('system/reset_pwd.html', {
+            'action': reverse('xstark:system_userinfo_reset'),
             'form': ResetPwdForm({'pks': ','.join(entities)}),
             'users': UserInfo.objects.filter(pk__in=entities).values('name')
         }, request=request), title='将为%s位用户重置密码' % len(entities)).json()
 
-    bulk_reset_view.text = '重置默认密码'
+    bulk_reset_view.text = '重置员工默认密码'
     action_list = [bulk_reset_view]
     filter_list = [
         Option('gender', is_choice=True),

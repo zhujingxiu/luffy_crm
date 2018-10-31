@@ -7,6 +7,7 @@ from django.urls import reverse
 
 from rbac import models
 from rbac.service.routes import get_all_url_dict
+from rbac.service.init_permission import init_permission
 from rbac.forms.permission import MultiPermissionForm, RoleModelForm, MenuModelForm, PermissionModelForm
 
 
@@ -250,12 +251,14 @@ def distribute_permissions(request):
         if not user:
             return HttpResponse('用户不存在')
         user.roles.set(request.POST.getlist('roles'))
+        init_permission(user, request)
 
     if request.method == 'POST' and request.POST.get('postType') == 'permission' and rid:
         role = models.Role.objects.filter(id=rid).first()
         if not role:
             return HttpResponse('角色不存在')
         role.permissions.set(request.POST.getlist('permissions'))
+        init_permission(user_class.objects.filter(id=uid).first(), request)
 
     user_list = user_class.objects.all()
     # ############################## 角色信息 ##########################

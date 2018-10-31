@@ -50,7 +50,10 @@ class RoleModelForm(forms.ModelForm):
     class Meta:
         model = models.Role
         fields = '__all__'
-        widgets = {'title': forms.TextInput(attrs={'placeholder': '请输入角色名称', 'class': 'form-control'})}
+        widgets = {
+            'title': forms.TextInput(attrs={'placeholder': '请输入角色名称', 'class': 'form-control'}),
+            'code': forms.TextInput(attrs={'placeholder': '请输入角色标识', 'class': 'form-control'}),
+        }
 
 
 ICON_LIST = [

@@ -16,9 +16,9 @@ def init_permission(user, request):
                                                                               'permissions__title',
                                                                               'permissions__url',
                                                                               'permissions__name',
-                                                                              'permissions__pid_id',
-                                                                              'permissions__pid__url',
-                                                                              'permissions__pid__name',
+                                                                              'permissions__parent_id',
+                                                                              'permissions__parent__url',
+                                                                              'permissions__parent__name',
                                                                               'permissions__menu_id',
                                                                               'permissions__menu__title',
                                                                               'permissions__menu__icon',
@@ -32,9 +32,9 @@ def init_permission(user, request):
             'id': item['permissions__id'],
             'title': item['permissions__title'],
             'url': item['permissions__url'],
-            'pid': item['permissions__pid_id'],
-            'pid_url': item['permissions__pid__url'],
-            'pid_name': item['permissions__pid__name'],
+            'parent': item['permissions__parent_id'],
+            'parent_url': item['permissions__parent__url'],
+            'parent_name': item['permissions__parent__name'],
         }
 
         # 处理菜单

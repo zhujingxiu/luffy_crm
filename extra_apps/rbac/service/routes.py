@@ -9,7 +9,6 @@ from collections import OrderedDict
 def recursion_urls(pre_namespace, pre_url, urlpatterns, url_ordered_dict):
     for item in urlpatterns:
         if isinstance(item, URLResolver):
-            print(item.pattern, type(item), item.pattern.describe())
             if pre_namespace:
                 if item.namespace:
                     namespace = "%s:%s" % (pre_namespace, item.namespace,)
@@ -20,17 +19,16 @@ def recursion_urls(pre_namespace, pre_url, urlpatterns, url_ordered_dict):
                     namespace = item.namespace
                 else:
                     namespace = None
-            recursion_urls(namespace, pre_url + item.pattern.describe(), item.url_patterns, url_ordered_dict)
+            recursion_urls(namespace, pre_url + str(item.pattern), item.url_patterns, url_ordered_dict)
         else:
-            print(item.pattern, type(item))
+
             if pre_namespace:
                 name = "%s:%s" % (pre_namespace, item.name,)
             else:
                 name = item.name
             if not item.name:
                 raise Exception('URL路由中必须设置name属性')
-
-            url = pre_url + item.pattern.describe()
+            url = pre_url + str(item.pattern)
             url_ordered_dict[name] = {'name': name, 'url': url}
 
 
@@ -47,7 +45,8 @@ def get_all_url_dict(ignore_namespace_list=None):
     urlpatterns = []
 
     for item in md.urlpatterns:
-        if item.namespace in ignore_list:
+
+        if not hasattr(item, 'namespace') or item.namespace in ignore_list:
             continue
         urlpatterns.append(item)
 

@@ -11,7 +11,7 @@ class ConsultRecordAdmin(StarkAdminModel):
         customer = self.request.GET.get('customer')
         if customer:
             return ConsultRecord.objects.filter(customer_id=customer)
-        return None
+        return ConsultRecord.objects.none()
 
 
 class PrivateConsultRecordlForm(forms.ModelForm):
@@ -27,7 +27,8 @@ class PrivateConsultRecordAdmin(StarkAdminModel):
 
     def get_queryset(self):
         customer = self.request.GET.get('customer')
-        current_user_id = 1  # 以后要改成去session中获取当前登陆用户ID
+        user = self.request.session.get('user_info')
+        current_user_id = user.get('id')
         if customer:
             return ConsultRecord.objects.filter(customer_id=customer, customer__consultant_id=current_user_id)
         return ConsultRecord.objects.filter(customer__consultant_id=current_user_id)
@@ -41,7 +42,8 @@ class PrivateConsultRecordAdmin(StarkAdminModel):
                 customer_id = params.get('customer')
 
                 form.instance.customer = Customer.objects.get(id=customer_id)
-            current_user_id = 1
+            user = self.request.session.get('user_info')
+            current_user_id = user.get('id')
             form.instance.consultant = UserInfo.objects.get(id=current_user_id)
         form.save()
 

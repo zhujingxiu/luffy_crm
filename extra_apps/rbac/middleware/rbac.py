@@ -2,8 +2,7 @@
 # -*- coding:utf-8 -*-
 import re
 from django.conf import settings
-from django.shortcuts import HttpResponse
-from django.http import JsonResponse
+from xstark.utils.response import XStarkErrorResponse
 
 
 class MiddlewareMixin(object):
@@ -38,7 +37,7 @@ class RbacMiddleware(MiddlewareMixin):
         # 2. 获取权限
         permission_dict = request.session.get(settings.PERMISSION_SESSION_KEY)
         if not permission_dict:
-            return HttpResponse('无权限信息，请重新登录')
+            return XStarkErrorResponse('无权限信息，请重新登录').json()
 
         flag = False
 
@@ -52,21 +51,21 @@ class RbacMiddleware(MiddlewareMixin):
             regex = "^%s$" % (url,)
             if re.match(regex, request.path_info):
                 flag = True
-                pid = item['pid']
-                pid_name = item['pid_name']
-                pid_url = item['pid_url']
-                if pid:
-                    request.current_permission_pid = item['pid']
+                parent = item['parent']
+                parent_name = item['parent_name']
+                parent_url = item['parent_url']
+                if parent:
+                    request.current_permission_parent = item['parent']
                     request.current_breadcrumb_list.extend([
-                        {'title': permission_dict[pid_name]['title'], 'url': pid_url},
+                        {'title': permission_dict[parent_name]['title'], 'url': parent_url},
                         {'title': item['title'], 'url': url, 'class': 'active'}
                     ])
                 else:
-                    request.current_permission_pid = item['id']
+                    request.current_permission_parent = item['id']
                     request.current_breadcrumb_list.append(
                         {'title': item['title'], 'url': url, 'class': 'active'}
                     )
                 break
 
         if not flag:
-            return JsonResponse({'status': False, 'error': '无权访问'})
+            return XStarkErrorResponse('无权访问').json()

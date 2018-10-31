@@ -16,9 +16,12 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from xstark.sites import site
+from system import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('rbac/', include('rbac.urls', namespace='rbac')),
     path('xstark/', site.urls),
+    path('login/', views.login),
+    path('logout/', views.logout),
 ]

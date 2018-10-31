@@ -48,7 +48,8 @@ class CourseRecordAdmin(StarkAdminModel):
         return urlpatterns
 
     def bulk_init(self, request):
-        current_user_id = 1
+        user = self.request.session.get('user_info')
+        current_user_id = user.get('id')
         pks = request.POST.get('pks')
         pks = pks.split(',')
         if not pks:
@@ -76,7 +77,6 @@ class CourseRecordAdmin(StarkAdminModel):
         :param request:
         :return:
         """
-        print(self.admin_model)
         entities = request.POST.getlist('pk')
         if not request.POST.getlist('pk'):
             return XStarkErrorResponse('请选择一项').json()

@@ -53,7 +53,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    #'rbac.middleware.rbac.RbacMiddleware',
+    'rbac.middleware.rbac.RbacMiddleware',
 ]
 
 ROOT_URLCONF = 'luffy_crm.urls'
@@ -141,7 +141,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'assets', 'media')
 
 
 # AUTH_USER_MODEL = 'system.UserInfo'
-
+USER_MODEL_PATH = 'system.models.UserInfo'
 
 DEFAULT_PWD = 'admin111'
 
@@ -150,6 +150,7 @@ PERMISSION_SESSION_KEY = "47(=3fs7pd!)y!b#"
 
 PERMISSION_VALID_URL = [
     '/login/',
+    '/logout/',
     '/admin/.*',
 ]
 

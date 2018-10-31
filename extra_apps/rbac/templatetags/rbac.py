@@ -22,7 +22,7 @@ def menu(request):
         val = menu_dict[key]
         val['class'] = 'hide'
         for per in val['children']:
-            if per['id'] == request.current_permission_pid:
+            if per['id'] == request.current_permission_parent:
                 per['class'] = 'active'
                 val['class'] = ''
         ordered_dict[key] = val

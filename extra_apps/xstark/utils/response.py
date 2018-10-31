@@ -28,9 +28,9 @@ class XStarkResponse(object):
 
 class XStarkSuccessResponse(XStarkResponse):
     def __init__(self, msg='', title='', data=None, tpl=None, redirect=None):
-        super().__init__(0, msg, title, data, tpl, redirect)
+        super().__init__(0, msg, title or '操作成功', data, tpl, redirect)
 
 
 class XStarkErrorResponse(XStarkResponse):
     def __init__(self, msg='', title='', data=None, tpl=None, redirect=None):
-        super().__init__(1, msg, title, data, tpl, redirect)
+        super().__init__(1, msg, title or '操作失败', data, tpl, redirect)

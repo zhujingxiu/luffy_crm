@@ -5,8 +5,7 @@
     <link rel="stylesheet" href="{% static 'xstark/plugins/layer/skin/layer.css' %} "/>
 {% endblock %}
 {% block content %}
-    <h3>{{ site_title }}</h3>
-    <div class="list-tools well">
+    <div class="list-tools {% if cl.gen_list_filters or cl.add_button or cl.search_list %}well{% endif  %}">
         {% if  cl.gen_list_filters %}
             <div class="comb-search col-sm-8 tool-block">
                 {% for row in cl.gen_list_filters %}
@@ -18,7 +17,7 @@
                 {% endfor %}
             </div>
         {% endif %}
-
+        {% if cl.add_button or cl.search_list %}
         <div class="col-sm-4 tool-block">
             {% if cl.add_button %}
                 <div class="button-list pull-right btn-group">
@@ -41,6 +40,7 @@
                 </div>
             {% endif %}
         </div>
+        {% endif %}
     </div>
     <form method="post" class="form-inline" id="form-list">
         {% csrf_token %}

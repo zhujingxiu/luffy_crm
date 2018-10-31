@@ -16,7 +16,6 @@ from django.template.loader import render_to_string
 class StudentForm(forms.ModelForm):
     customer = forms.ChoiceField(label='客户', widget=forms.Select, choices=Customer.objects.exclude(
         pk__in=Student.objects.all().values('customer_id')).values_list('pk', 'name'))
-    # classinfo = forms.MultipleChoiceField(label='已报班级', widget=forms.CheckboxSelectMultiple(attrs={'class': 'xstark-checkbox'}), choices=ClassInfo.objects.all().values_list('pk', 'title'))
 
     class Meta:
         model = Student
@@ -62,7 +61,7 @@ class StudentAdmin(StarkAdminModel):
     def extra_urls(self):
         from django.urls import path
         return [
-            path('reset/', self.wrapper(self.bulk_reset), name='system_userinfo_reset'),
+            path('reset/', self.wrapper(self.bulk_reset), name='service_student_reset'),
         ]
 
     def bulk_reset(self, request):
@@ -80,6 +79,7 @@ class StudentAdmin(StarkAdminModel):
         if not request.POST.getlist('pk'):
             return XStarkErrorResponse('请选择一项').json()
         return XStarkSuccessResponse(tpl=render_to_string('system/reset_pwd.html', {
+            'action': reverse('xstark:service_student_reset'),
             'form': ResetPwdForm({'pks': ','.join(entities)}),
             'users': Student.objects.filter(pk__in=entities).values('name')
         }, request=request), title='将为%s位用户重置密码' % len(entities)).json()

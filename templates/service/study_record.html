@@ -1,0 +1,47 @@
+{% extends 'layout.html' %}
+{% block css %}
+
+{% endblock %}
+{% block content %}
+<form method="post">
+    <div class="panel panel-default">
+        <div class="panel-heading">学习记录</div>
+        <div class="panel-body">
+            <div class="well well-sm">
+                {% csrf_token %}
+                {{ formset.management_form }}
+
+                <table class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th>姓名</th>
+                        <th>日期</th>
+                        <th>课程</th>
+                        <th>考勤</th>
+                        <th>作业成绩</th>
+                        <th>作业评语</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for form in formset %}
+                        <tr>
+                            {{ form.id }}
+                            <td>{{ form.instance.student.customer.name }}</td>
+                            <td>{{ form.instance.course_record.date }}</td>
+                            <td>{{ form.instance.course_record }}</td>
+                            <td>{{ form.checking }} {{ form.checking.errors.0 }}</td>
+                            <td>{{ form.score }} {{ form.score.errors.0 }}</td>
+                            <td>{{ form.homework_note }} {{ form.homework_note.errors.0 }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="panel-footer">
+            <button type="submit" class="btn btn-primary">保存</button>
+        </div>
+    </div>
+</form>
+
+{% endblock %}

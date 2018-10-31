@@ -2,6 +2,7 @@
 # -*- coding:utf-8 -*-
 # _AUTHOR_  : zhujingxiu
 # _DATE_    : 2018/10/22
+from system.rbac import RbacPermission
 from service.models import Customer, CustomerInfo
 from service.forms import CustomerForm, CustomerInfoForm, PublicCustomerForm, PrivateCustomerForm
 from xstark.sites import StarkAdminModel, Option, get_choice_text
@@ -13,7 +14,7 @@ from django.utils.safestring import mark_safe
 from django.template.loader import render_to_string
 
 
-class CustomerAdmin(StarkAdminModel):
+class CustomerAdmin(RbacPermission, StarkAdminModel):
 
     def display_follow(self, entity=None, header=False):
         if header:
@@ -53,10 +54,10 @@ class CustomerAdmin(StarkAdminModel):
                 return redirect(self.reverse_display_list())
             else:
                 print(form.errors)
-        return render(request, 'service/customerset.html', {'form': form, 'info_form': info_form, 'list_url': list_url, 'msg': msg})
+        return render(request, 'service/customer_set.html', {'form': form, 'info_form': info_form, 'list_url': list_url, 'msg': msg})
 
 
-class PublicCustomerAdmin(StarkAdminModel):
+class PublicCustomerAdmin(RbacPermission, StarkAdminModel):
     display_option = False
     has_bulk_delete = False
     list_display = ['name', 'phone', get_choice_text('gender'), get_choice_text('status'), 'course', get_choice_text('source')]
@@ -80,7 +81,8 @@ class PublicCustomerAdmin(StarkAdminModel):
         :param request:
         :return:
         """
-        current_user_id = 1
+        user = self.request.session.get('user_info')
+        current_user_id = user.get('id')
         pks = request.POST.get('pks')
         pks = pks.split(',')
         if not pks:
@@ -101,7 +103,8 @@ class PublicCustomerAdmin(StarkAdminModel):
         :return:
         """
         entities = request.POST.getlist('pk')
-        current_user_id = 1  # 以后要改成去session中获取当前登陆用户ID
+        user = self.request.session.get('user_info')
+        current_user_id = user.get('id')
 
         privates = Customer.objects.filter(consultant_id=current_user_id, status=2).count()
 
@@ -115,6 +118,7 @@ class PublicCustomerAdmin(StarkAdminModel):
         }, request=request), title='将申请以下%s位用户' % len(entities)).json()
 
     bulk_apply_view.text = "申请客户"
+    bulk_apply_view.url = 'xstark:service_customer_pub_apply'
 
     action_list = [bulk_apply_view, ]
 
@@ -122,7 +126,7 @@ class PublicCustomerAdmin(StarkAdminModel):
         return self.admin_model.objects.filter(consultant__isnull=True)
 
 
-class PrivateCustomerAdmin(StarkAdminModel):
+class PrivateCustomerAdmin(RbacPermission, StarkAdminModel):
     display_option = False
     has_bulk_delete = False
 
@@ -158,7 +162,8 @@ class PrivateCustomerAdmin(StarkAdminModel):
         pks = pks.split(',')
         if not pks:
             return XStarkErrorResponse('pk 参数错误').json()
-        current_user_id = 1  # 以后要改成去session中获取当前登陆用户ID
+        user = self.request.session.get('user_info')
+        current_user_id = user.get('id')
         Customer.objects.filter(id__in=pks, status=2, consultant_id=current_user_id).update(consultant=None)
         return XStarkSuccessResponse('已经移除成功').json()
 

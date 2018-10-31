@@ -27,12 +27,7 @@
         <form class="change" method="post">
             {% csrf_token %}
             <div class="panel panel-default">
-                <div class="panel-heading">
-                    <div class="pull-right">
-                        <a href="{{ list_url }}" class="btn btn-default btn-sm">返回</a>
-                    </div>
-                    <h5>{{ site_title }}</h5>
-                </div>
+
                 <div class="panel-body">
                     {% for filed in form %}
                         <div class="form-group">
@@ -44,6 +39,7 @@
                 </div>
                 <div class="panel-footer">
                     <button type="submit" class="btn btn-primary">保存</button>
+                    <a href="{{ list_url }}" class="btn btn-default btn-sm">返回</a>
                 </div>
             </div>
         </form>

@@ -3,7 +3,7 @@
 # _AUTHOR_  : zhujingxiu
 # _DATE_    : 2018/9/12
 import functools
-from types import FunctionType
+from types import FunctionType, MethodType
 from django.forms import ModelForm
 from django.utils.safestring import mark_safe
 from django.template.loader import render_to_string
@@ -14,12 +14,11 @@ from .utils.response import XStarkErrorResponse, XStarkSuccessResponse
 
 def get_choice_text(field, head=None):
     """
-    获取choice对应的内容
+    获取choice对应的内容，可由双下划线模式获取关联字段内容，暂时仅支持跨单表查询
     :param field:  字段名称
     :param head: 表头名称
     :return:
     """
-
     def inner(self, entity=None, header=False):
         try:
             model_field = self.admin_model._meta.get_field(field)
@@ -117,6 +116,13 @@ class Option(object):
         self.verbose_name = verbose_name
 
     def get_queryset(self, _field, model_class, query_dict):
+        '''
+        获取结果集
+        :param _field:
+        :param model_class:
+        :param query_dict:
+        :return:
+        '''
         verbose = self.verbose_name or _field.verbose_name
         if isinstance(_field, ForeignKey) or isinstance(_field, ManyToManyField):
             row = Row(_field.related_model.objects.filter(**self.condition), self, query_dict, verbose_name=verbose)
@@ -128,6 +134,11 @@ class Option(object):
         return row
 
     def get_text(self, item):
+        '''
+        获取模型实例指定字段文本
+        :param item:
+        :return:
+        '''
         if self.text_func:
             return self.text_func(item)
         if self.is_choice:
@@ -135,6 +146,11 @@ class Option(object):
         return str(item)
 
     def get_value(self, item):
+        '''
+        获取模型实例指定字段值
+        :param item:
+        :return:
+        '''
         if self.value_func:
             return self.value_func(item)
         if self.is_choice:
@@ -156,6 +172,11 @@ class ChangeList(object):
         self.list_filter = site_model.get_filter_list()
 
     def get_model_field(self, field):
+        '''
+        获取模型字段，可由双下划线模式（model__field）获取关联字段内容，暂时仅支持跨单表查询
+        :param field:
+        :return:
+        '''
         try:
             model_field = self.site.admin_model._meta.get_field(field)
         except:
@@ -165,30 +186,44 @@ class ChangeList(object):
         return model_field
 
     def gen_list_filters(self):
-        for option in self.list_filter:
-            if isinstance(option, str):
-                option = Option(option)
-            _field = self.get_model_field(option.field)
-            yield option.get_queryset(_field, self.site.admin_model, self.site.request.GET)
+        '''
+        获取组合搜索项
+        :return:
+        '''
+
+        if self.list_filter:
+            for option in self.list_filter:
+                if isinstance(option, str):
+                    option = Option(option)
+                _field = self.get_model_field(option.field)
+                yield option.get_queryset(_field, self.site.admin_model, self.site.request.GET)
 
     def gen_list_header(self):
+        '''
+        获取列表表头
+        :return:
+        '''
         if not self.list_display:
             yield self.site.admin_model._meta.model_name
         else:
             for field in self.list_display:
-                if isinstance(field, FunctionType):
+                if isinstance(field, FunctionType) or isinstance(field, MethodType):
                     yield field(self.site, header=True)
                 else:
                     yield self.get_model_field(field).verbose_name
 
     def gen_list_body(self):
+        '''
+        获取模型实例列表
+        :return:
+        '''
         for item in self.queryset:
             row = []
             if not self.list_display:
                 row.append(item)
             else:
                 for field in self.list_display:
-                    if isinstance(field, FunctionType):
+                    if isinstance(field, FunctionType) or isinstance(field, MethodType):
                         row.append(field(self.site, entity=item))
                     else:
                         model_field = self.get_model_field(field)
@@ -201,6 +236,15 @@ class ChangeList(object):
 
 
 class StarkAdminModel(object):
+    '''
+    list_display: 模型实例的显示字段
+    order_by: 模型实例的排序规则
+    action_list: 模型实例的批量操作
+    filter_list: 关键字搜索涉及到的模型实例的字段
+    model_form_class: 指定实例的模型
+    display_option：是否显示编辑删除合并项，默认显示
+    request_get_key：自定义session存储request数据的键
+    '''
     list_display = []
     order_by = []
     action_list = []
@@ -208,7 +252,6 @@ class StarkAdminModel(object):
     filter_list = []
     model_form_class = None
     display_option = True
-    has_bulk_delete = True
     request_get_key = 'xstark_get'
 
     admin_title = ''
@@ -239,8 +282,7 @@ class StarkAdminModel(object):
 
     def get_action_list(self):
         actions = []
-        if self.has_bulk_delete:
-            actions.append(self.bulk_delete)
+        actions.append(StarkAdminModel.bulk_delete)
         actions.extend(self.action_list)
         return actions
 
@@ -286,11 +328,8 @@ class StarkAdminModel(object):
         @functools.wraps(func)
         def inner(request, *args, **kwargs):
             if request.GET:
-                # request.session[self.request_get_key] = request.GET.copy()
                 request.session[self.request_get_key] = request.GET.urlencode()
-                # print(self.request_get_key, request.session.get(self.request_get_key), type(request.session.get(self.request_get_key)))
             self.request = request
-            # print('wrapper session:', self.request.session.get(self.request_get_key), type(self.request.session.get(self.request_get_key)))
             return func(request, *args, **kwargs)
 
         return inner
@@ -324,7 +363,7 @@ class StarkAdminModel(object):
         display = []
         display.append(StarkAdminModel.display_checkbox)
         display.extend(self.list_display)
-        if StarkAdminModel.display_edit not in display and StarkAdminModel.display_delete not in display and self.display_option:
+        if StarkAdminModel.display_edit not in display and StarkAdminModel.display_delete not in display and StarkAdminModel.display_option:
             display.append(StarkAdminModel.display_options)
         return display
 
@@ -337,14 +376,20 @@ class StarkAdminModel(object):
         return self.admin_model.objects
 
     def changelist_view(self, request):
+        '''
+        模型实例列表视图
+        :param request:
+        :return:
+        '''
         if request.method == 'POST':
             method_name = request.POST.get('action')
             method_dict = self.get_action_dict()
             if method_name in method_dict:
+                if hasattr(method_name, 'url'):
+                    print(getattr(method_name,'url'))
                 return getattr(self, method_name)(request)
 
         search_list, q, condition = self.get_search_condition(request)
-
         total_count = self.get_queryset().filter(condition).filter(**self.get_filter_condition()).count()
         from xstark.utils.pagination import Pagination
 
@@ -354,7 +399,7 @@ class StarkAdminModel(object):
 
         queryset = self.get_queryset().filter(condition).filter(**self.get_filter_condition()).order_by(
             *self.get_order_by()).distinct()[page.start:page.end]
-        context = {'cl': ChangeList(self, queryset, q, search_list, page), 'site_title': self.get_site_title()}
+        context = {'cl': ChangeList(self, queryset, q, search_list, page)}
         return render(request, 'xstark/changelist.html', context)
 
     def display_add(self):
@@ -428,7 +473,11 @@ class StarkAdminModel(object):
         return name
 
     def get_model_form(self, request=None):
-
+        '''
+        通过request传参获取不同的实例模型
+        :param request:
+        :return:
+        '''
         if self.model_form_class:
             return self.model_form_class
 
@@ -444,10 +493,22 @@ class StarkAdminModel(object):
         return entity
 
     def get_form_instance(self, data=None, instance=None, request=None):
+        '''
+        通过request传参获取不同的FORM表单
+        :param data: 提交的新数据
+        :param instance: 原实例数据
+        :param request: 请求参数
+        :return:
+        '''
         form = self.get_model_form(request=request)
         return form(data=data, instance=instance)
 
     def add_view(self, request):
+        '''
+        模型实例的添加视图
+        :param request:
+        :return:
+        '''
         list_url = self.reverse_display_list()
         form = self.get_form_instance(request=request)
         if request.method == 'POST':
@@ -458,9 +519,15 @@ class StarkAdminModel(object):
                 return redirect(self.reverse_display_list())
             else:
                 print(form.errors)
-        return render(request, 'xstark/change.html', {'form': form, 'list_url': list_url, 'site_title': self.get_site_title()})
+        return render(request, 'xstark/change.html', {'form': form, 'list_url': list_url})
 
     def change_view(self, request, entity_id):
+        '''
+        模型实例的编辑视图
+        :param request:
+        :param entity_id:
+        :return:
+        '''
         entity = self.admin_model.objects.filter(pk=entity_id).first()
         if not entity:
             return XStarkErrorResponse('不存在').json()
@@ -470,10 +537,15 @@ class StarkAdminModel(object):
             return redirect(self.reverse_display_list())
         list_url = self.reverse_display_list()
         form = self.get_form_instance(instance=entity, request=request)
-        return render(request, 'xstark/change.html',
-                      {'form': form, 'list_url': list_url, 'site_title': self.get_site_title()})
+        return render(request, 'xstark/change.html', {'form': form, 'list_url': list_url})
 
     def delete_view(self, request, entity_id):
+        '''
+        模型实例的删除视图，使用ajax弹窗
+        :param request:
+        :param entity_id:
+        :return:
+        '''
         entity = self.admin_model.objects.filter(pk=entity_id).first()
         if not entity:
             return XStarkErrorResponse('不存在').json()

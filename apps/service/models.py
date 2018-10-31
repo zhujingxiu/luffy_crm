@@ -112,7 +112,7 @@ class Student(models.Model):
     """
     customer = models.OneToOneField(Customer, verbose_name='客户信息', on_delete=models.CASCADE)
     username = models.CharField('用户名', max_length=32)
-    password = models.CharField('密码', max_length=64)
+    password = models.CharField('密码', max_length=128)
     emergency_contract = models.CharField(max_length=32, blank=True, null=True, verbose_name='紧急联系人')
     classinfo = models.ManyToManyField(ClassInfo, verbose_name="已报班级",  blank=True)
     company = models.CharField('公司', max_length=128, blank=True, null=True)
@@ -168,8 +168,8 @@ class CourseRecord(models.Model):
 class StudyRecord(models.Model):
     course_record = models.ForeignKey(CourseRecord, verbose_name="第几天课程", on_delete=models.CASCADE)
     student = models.ForeignKey(Student, verbose_name="学员", on_delete=models.CASCADE)
-    record_choices = (('checked', "已签到"), ('vacate', "请假"), ('late', "迟到"), ('noshow', "缺勤"), ('leave_early', "早退"),)
-    record = models.CharField("上课纪录", choices=record_choices, default="checked", max_length=64)
+    record_choices = (('signed', "已签到"), ('vacate', "请假"), ('late', "迟到"), ('noshow', "缺勤"), ('leave_early', "早退"),)
+    checking = models.CharField("考勤结果", choices=record_choices, default="signed", max_length=64)
     SCORES = (
         (100, 'A+'),
         (90, 'A'),
