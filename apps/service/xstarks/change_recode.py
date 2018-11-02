@@ -2,9 +2,8 @@
 # -*- coding:utf-8 -*-
 # _AUTHOR_  : zhujingxiu
 # _DATE_    : 2018/10/24
-
+from system.rbac import RbacSiteAdmin
 from service.models import Student, ChangeRecord
-
 from xstark.sites import StarkAdminModel, Option, get_choice_text
 from xstark.utils.response import XStarkSuccessResponse, XStarkErrorResponse
 from django.shortcuts import reverse, redirect, render
@@ -14,7 +13,7 @@ from django.utils.safestring import mark_safe
 from django.template.loader import render_to_string
 
 
-class ChangeRecordAdmin(StarkAdminModel):
+class ChangeRecordAdmin(RbacSiteAdmin):
     list_display = ['student', 'origin_class', 'target_class', 'add_date', ]
 
     filter_list = ['origin_class']

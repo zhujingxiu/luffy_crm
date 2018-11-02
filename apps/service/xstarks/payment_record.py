@@ -2,9 +2,8 @@
 # -*- coding:utf-8 -*-
 # _AUTHOR_  : zhujingxiu
 # _DATE_    : 2018/10/24
-
+from system.rbac import RbacSiteAdmin
 from service.models import Student, PaymentRecord
-
 from xstark.sites import StarkAdminModel, Option, get_choice_text
 from xstark.utils.response import XStarkSuccessResponse, XStarkErrorResponse
 from django import forms
@@ -16,12 +15,13 @@ from django.template.loader import render_to_string
 
 class PaymentRecordForm(forms.ModelForm):
     confirm_date = forms.DateField(label='确认日期', widget=forms.SelectDateWidget(years=(('2018','2019','2020')),attrs={'class':'datepicker'}))
+
     class Meta:
         model = PaymentRecord
         exclude = ['customer']
 
 
-class PaymentRecordAdmin(StarkAdminModel):
+class PaymentRecordAdmin(RbacSiteAdmin):
 
     list_display = ['customer', 'consultant', 'classinfo', get_choice_text('pay_type'), 'paid_fee', get_choice_text('status')]
 

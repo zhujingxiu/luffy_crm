@@ -44,7 +44,9 @@
     </div>
     <form method="post" class="form-inline" id="form-list">
         {% csrf_token %}
+
         <div class="col-sm-5">
+            {% if cl.action_list %}
             <div class="form-group" style="margin-bottom: 5px;">
                 <div class="input-group">
                     <select name="action" class="form-control">
@@ -58,6 +60,7 @@
                     </span>
                 </div>
             </div>
+            {% endif %}
         </div>
         <div class="col-sm-7">
             <ul class="pagination pull-right">
@@ -94,11 +97,11 @@
                 },
                 success: function (json) {
                     if (json.errcode == 0) {
-                        if (json.tpl) {
+                        if (json.dialog) {
                             layer.closeAll('loading');
                             layer.open({
                                 'title': json.title,
-                                'content': json.tpl,
+                                'content': json.dialog,
                                 'area': '600px',
                                 'btn': false
                             })
@@ -118,21 +121,29 @@
                 $(this).prop('checked', clicked)
             })
         });
-        $('._list-del').click(function () {
+        $('.btn-perm').click(function () {
             var url = $(this).data('href');
             $.getJSON(url, {_t: Math.random()}, function (json) {
                 layer.load();
                 if (json.errcode == 0) {
-                    layer.open({
-                        'title': json.title,
-                        'content': json.tpl,
-                        'area': '600px',
-                        'btn': false
-                    })
+                    if(json.redirect){
+                        location.href = json.redirect;
+                    }
+                    layer.closeAll('loading');
+                    if(json.dialog) {
+                        layer.open({
+                            'title': json.title,
+                            'content': json.dialog,
+                            'area': '600px',
+                            'btn': false
+                        })
+                    }
                 } else {
-                    layer.msg(json.msg, {icon: 5});
+                    layer.msg(json.msg, {icon: 5},function () {
+                        layer.closeAll('loading');
+                    });
                 }
-                layer.closeAll('loading');
+
             })
         })
     </script>

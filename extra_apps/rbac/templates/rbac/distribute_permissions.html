@@ -62,6 +62,7 @@
 
         .permission-area .node .children {
             padding: 0 0 0 20px;
+            border-bottom: 1px dashed #c0c0c0 ;
         }
 
         .permission-area .node .children .child {
@@ -182,7 +183,14 @@
                         <tbody>
                         {% for item in all_menu_list %}
                             <tr class="root">
-                                <td><i class="fa fa-caret-down" aria-hidden="true"></i>{{ item.title }}</td>
+                                <td><span><i class="fa fa-caret-down" aria-hidden="true"></i>{{ item.title }}</span>
+                                    {% if item.children %}
+                                    <div class="pull-right">
+                                        <input  class="prop-module" type="checkbox">
+                                        <label> 全选 </label>
+                                    </div>
+                                    {% endif %}
+                                </td>
                             </tr>
                             <tr class="node">
                                 <td>
@@ -201,16 +209,22 @@
                                             {% else %}
                                                 <label for="permission_{{ node.id }}">{{ node.title }}（菜单）</label>
                                             {% endif %}
+                                            {% if node.children %}
+                                            <div class="pull-right">
+                                                <input data-rel="permission_{{ node.id }}" data-rel-child="prop-parent-{{ node.id }}" class="prop-parent" type="checkbox">
+                                                <label> 全选 </label>
+                                            </div>
+                                            {% endif %}
                                         </div>
                                         <div class="children">
                                             {% for child in node.children %}
                                                 <div class="child">
                                                     {% if child.id in role_has_permissions_dict %}
                                                         <input id="permission_{{ child.id }}" name="permissions"
-                                                               type="checkbox" value="{{ child.id }}" checked>
+                                                               type="checkbox" value="{{ child.id }}" checked class="prop-parent-{{ node.id }}">
                                                     {% else %}
                                                         <input id="permission_{{ child.id }}" name="permissions"
-                                                               type="checkbox" value="{{ child.id }}">
+                                                               type="checkbox" value="{{ child.id }}" class="prop-parent-{{ node.id }}">
                                                     {% endif %}
 
                                                     <label for="permission_{{ child.id }}">{{ child.title }}</label>
@@ -233,21 +247,31 @@
 {% block js %}
     <script>
         $(function () {
-            bindRootPermissionClick();
-        });
-
-        function bindRootPermissionClick() {
-            $('.permission-area').on('click', '.root', function () {
+            $('.permission-area .root').on('click', 'span', function () {
                 var caret = $(this).find('i');
                 if (caret.hasClass('fa-caret-right')) {
                     caret.removeClass('fa-caret-right').addClass('fa-caret-down');
-                    $(this).next().removeClass('hide');
+                    $(this).parent().parent().next().removeClass('hide');
+
                 } else {
                     caret.removeClass('fa-caret-down').addClass('fa-caret-right');
-                    $(this).next().addClass('hide');
+                    $(this).parent().parent().next().addClass('hide');
 
                 }
-            })
-        }
+            });
+            $('.permission-area .root').on('click','.prop-module',function () {
+                var clicked = $(this).prop('checked');
+                $.each($(this).parentsUntil('.root').parent().next().find('input[type="checkbox"]'), function () {
+                    $(this).prop('checked', clicked)
+                });
+            });
+            $('.permission-area .node').on('click','.prop-parent',function () {
+                var clicked = $(this).prop('checked');
+                $.each($('.'+$(this).data('rel-child')), function () {
+                    $(this).prop('checked', clicked)
+                });
+                $('#'+$(this).data('rel')).prop('checked', clicked)
+            });
+        });
     </script>
 {% endblock %}

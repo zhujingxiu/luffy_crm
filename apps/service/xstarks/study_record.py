@@ -2,7 +2,7 @@
 # -*- coding:utf-8 -*-
 # _AUTHOR_  : zhujingxiu
 # _DATE_    : 2018/10/24
-
+from system.rbac import RbacSiteAdmin
 from service.models import Student, StudyRecord
 from xstark.sites import StarkAdminModel, Option, get_choice_text
 from xstark.utils.response import XStarkSuccessResponse, XStarkErrorResponse
@@ -24,7 +24,7 @@ class StudyRecordForm(ModelForm):
         }
 
 
-class StudyRecordAdmin(StarkAdminModel):
+class StudyRecordAdmin(RbacSiteAdmin):
 
     def get_urls(self):
         return [path('', self.wrapper(self.changelist_view), name=self.get_list_url_name), ]

@@ -13,7 +13,6 @@ register = Library()
 @register.inclusion_tag('rbac/menu.html')
 def menu(request):
     """生成菜单"""
-
     menu_dict = request.session.get(settings.MENU_SESSION_KEY)
     key_list = sorted(menu_dict)
 
@@ -22,7 +21,7 @@ def menu(request):
         val = menu_dict[key]
         val['class'] = 'hide'
         for per in val['children']:
-            if per['id'] == request.current_permission_parent:
+            if hasattr(request, 'current_permission_parent') and per['id'] == request.current_permission_parent:
                 per['class'] = 'active'
                 val['class'] = ''
         ordered_dict[key] = val
@@ -35,7 +34,7 @@ def menu(request):
 def breadcrumb(request):
     """生成路径导航"""
     return {
-        'breadcrumb_list': request.current_breadcrumb_list
+        'breadcrumb_list': request.current_breadcrumb_list if hasattr(request, 'current_breadcrumb_list') else ''
     }
 
 

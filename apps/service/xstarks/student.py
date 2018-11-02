@@ -2,9 +2,10 @@
 # -*- coding:utf-8 -*-
 # _AUTHOR_  : zhujingxiu
 # _DATE_    : 2018/10/22
+from system.rbac import RbacSiteAdmin
 from service.forms import ResetPwdForm
 from service.models import Student, Customer, ClassInfo
-from xstark.sites import StarkAdminModel, Option, get_choice_text
+from xstark.sites import Option, get_choice_text
 from xstark.utils.response import XStarkSuccessResponse, XStarkErrorResponse
 from django import forms
 from django.shortcuts import reverse
@@ -23,7 +24,7 @@ class StudentForm(forms.ModelForm):
         exclude = ['password']
 
 
-class StudentAdmin(StarkAdminModel):
+class StudentAdmin(RbacSiteAdmin):
 
     def display_payment_change(self, entity=None, header=False):
         if header:
@@ -40,7 +41,7 @@ class StudentAdmin(StarkAdminModel):
         get_choice_text('customer__gender'),
         'classinfo',
         display_payment_change,
-        StarkAdminModel.display_edit
+        RbacSiteAdmin.display_edit
     ]
 
     filter_list = [
@@ -78,11 +79,13 @@ class StudentAdmin(StarkAdminModel):
         entities = request.POST.getlist('pk')
         if not request.POST.getlist('pk'):
             return XStarkErrorResponse('请选择一项').json()
-        return XStarkSuccessResponse(tpl=render_to_string('system/reset_pwd.html', {
+        return XStarkSuccessResponse(dialog=render_to_string('system/reset_pwd.html', {
             'action': reverse('xstark:service_student_reset'),
             'form': ResetPwdForm({'pks': ','.join(entities)}),
             'users': Student.objects.filter(pk__in=entities).values('name')
         }, request=request), title='将为%s位用户重置密码' % len(entities)).json()
 
     bulk_reset_view.text = '重置默认密码'
+    bulk_reset_view.path_name = 'xstark:service_student_reset'
+
     action_list = [bulk_reset_view, ]

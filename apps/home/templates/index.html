@@ -1,0 +1,35 @@
+{% extends 'common/base.html' %}
+{% load staticfiles %}
+{% block title %}首页{% endblock %}
+{% block content %}
+    <div class="container bs-docs-container">
+        <div class="row">
+
+            <div class="col-md-9">
+                <div class="bs-docs-section">
+                    <h3 class="page-header">
+                        最新开班信息
+                    </h3>
+                    {% for item in classes %}
+                        <div class="bs-callout bs-callout-info">
+                            <h4>
+                                <a href="#">{{ item.title }} <small>{{ item.semester }}期</small></a>
+                                <div class="pull-right">
+                                    {{ item.price }}
+                                </div>
+                            </h4>
+                            <p>开班日期：{{ item.openday }} 班主任：{{ item.tutor }} 所在校区：{{ item.college }}</p>
+
+                        </div>
+                    {% endfor %}
+                </div>
+
+
+            </div>
+            <div class="col-md-3">
+                {% include 'common/sidebar.html' %}
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

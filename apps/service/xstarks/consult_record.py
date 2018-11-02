@@ -1,10 +1,15 @@
+#!/usr/bin/env python
+# -*- coding:utf-8 -*-
+# _AUTHOR_  : zhujingxiu
+# _DATE_    : 2018/10/24
+from system.rbac import RbacSiteAdmin
 from service.models import Customer, ConsultRecord
 from system.models import UserInfo
 from xstark.sites import StarkAdminModel
 from django import forms
 
 
-class ConsultRecordAdmin(StarkAdminModel):
+class ConsultRecordAdmin(RbacSiteAdmin):
     list_display = ['customer', 'note', 'consultant']
 
     def get_queryset(self):
@@ -20,7 +25,7 @@ class PrivateConsultRecordlForm(forms.ModelForm):
         exclude = ['customer', 'consultant']
 
 
-class PrivateConsultRecordAdmin(StarkAdminModel):
+class PrivateConsultRecordAdmin(RbacSiteAdmin):
     list_display = ['customer', 'note', 'consultant', 'date']
 
     model_form_class = PrivateConsultRecordlForm

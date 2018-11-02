@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 import re
-from django.conf import settings
+
+from django.shortcuts import render, redirect
 from xstark.utils.response import XStarkErrorResponse
 
 
@@ -29,6 +30,18 @@ class RbacMiddleware(MiddlewareMixin):
         :param request:
         :return:
         """
+        from django.conf import settings
+        from django.utils.module_loading import import_string
+        from rbac.service.init_permission import init_permission
+
+        user_class = import_string(settings.USER_MODEL_PATH)
+        user = request.session.get('user_info')
+        if user:
+            current_user = user_class.objects.filter(pk=user.get('id')).first()
+            request.user = current_user
+            # 也可及时更新权限
+            init_permission(current_user, request)
+
         # 1. 获取白名单，让白名单中的所有url和当前访问url匹配
         for reg in settings.PERMISSION_VALID_URL:
             if re.match(reg, request.path_info):
@@ -37,7 +50,8 @@ class RbacMiddleware(MiddlewareMixin):
         # 2. 获取权限
         permission_dict = request.session.get(settings.PERMISSION_SESSION_KEY)
         if not permission_dict:
-            return XStarkErrorResponse('无权限信息，请重新登录').json()
+            msg = '无权限信息，请重新登录'
+            return XStarkErrorResponse(msg).json() if request.is_ajax() else redirect(settings.XSTARK_EXIT)
 
         flag = False
 
@@ -45,7 +59,6 @@ class RbacMiddleware(MiddlewareMixin):
         request.current_breadcrumb_list = [
             {'title': '首页', 'url': '#'}
         ]
-
         for name, item in permission_dict.items():
             url = item['url']
             regex = "^%s$" % (url,)
@@ -68,4 +81,11 @@ class RbacMiddleware(MiddlewareMixin):
                 break
 
         if not flag:
-            return XStarkErrorResponse('无权访问').json()
+            from django.conf import settings
+            deny_tpl = settings.PERMISSION_DENY_TPL if hasattr(settings, 'PERMISSION_DENY_TPL') else 'rbac/denied.html'
+            msg = '无权访问，%s' % request.path_info
+            context = {
+                'msg': msg,
+                'redirect': request.META['HTTP_REFERER'] if hasattr(request.META, 'HTTP_REFERER') else settings.XSTARK_HOME
+            }
+            return XStarkErrorResponse(msg).json() if request.is_ajax() else render(request, deny_tpl, context)

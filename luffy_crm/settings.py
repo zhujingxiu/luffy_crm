@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'rbac',
     'system',
     'service',
+    'home'
 ]
 
 
@@ -69,6 +70,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'home.auth.context_processors.G',
             ],
         },
     },
@@ -139,7 +141,9 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'assets', 'media')
 
+# SESSION
 
+SESSION_COOKIE_AGE = 60*30
 # AUTH_USER_MODEL = 'system.UserInfo'
 USER_MODEL_PATH = 'system.models.UserInfo'
 
@@ -148,10 +152,26 @@ DEFAULT_PWD = 'admin111'
 MENU_SESSION_KEY = "dvu#5ed1qxbz^7e0!o("
 PERMISSION_SESSION_KEY = "47(=3fs7pd!)y!b#"
 
+
+XSTARK_PROFILE = '/xstark/profile/'
+XSTARK_ENTRANCE = '/xstark/login/'
+XSTARK_HOME = '/xstark/dashboard/'
+XSTARK_EXIT = '/xstark/logout/'
+
+
 PERMISSION_VALID_URL = [
+    '/admin/.*',
+    '/my/.*',
     '/login/',
     '/logout/',
-    '/admin/.*',
-]
+    '/home/',
+    XSTARK_ENTRANCE,
+    XSTARK_EXIT,
+    XSTARK_HOME,
+    XSTARK_PROFILE,
 
+]
 MAX_PRIVATE_CUSTOMER = 150
+
+
+

@@ -2,7 +2,7 @@
 # -*- coding:utf-8 -*-
 # _AUTHOR_  : zhujingxiu
 # _DATE_    : 2018/10/24
-
+from system.rbac import RbacSiteAdmin
 from service.models import CourseRecord, Student, StudyRecord
 from system.models import UserInfo
 from xstark.sites import StarkAdminModel, Option, get_choice_text
@@ -27,7 +27,7 @@ class CourseRecordForm(forms.ModelForm):
             return UserInfo.objects.get(pk=teacher)
 
 
-class CourseRecordAdmin(StarkAdminModel):
+class CourseRecordAdmin(RbacSiteAdmin):
 
     def display_study_record(self, entity=None, header=False):
         if header:
@@ -69,7 +69,7 @@ class CourseRecordAdmin(StarkAdminModel):
                 num += 1
 
             StudyRecord.objects.bulk_create(study_record_list)
-        return XStarkSuccessResponse('初始化成功,执行%s次'%(str(num))).json()
+        return XStarkSuccessResponse('初始化成功,执行%s次' % (str(num))).json()
 
     def bulk_init_view(self, request):
         """
@@ -95,12 +95,13 @@ class CourseRecordAdmin(StarkAdminModel):
                 'entities': [item['customer__name'] for item in Student.objects.filter(classinfo=_entity.classinfo).values('customer__name')]
             })
 
-        return XStarkSuccessResponse(tpl=render_to_string('service/action_confirm.html', {
+        return XStarkSuccessResponse(dialog=render_to_string('service/action_confirm.html', {
             'action': reverse('xstark:service_courserecord_init'),
             'pks': ','.join(entities),
             'entities_set': options,
             'submit_text': '确认初始化'
         }, request=request), title='将为%s位用户初始化上课记录' % len(entities)).json()
     bulk_init_view.text = "批量初始化"
+    bulk_init_view.url = "xstark:service_courserecord_init"
 
     action_list = [bulk_init_view, ]

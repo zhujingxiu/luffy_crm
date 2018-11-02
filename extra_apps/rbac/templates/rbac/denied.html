@@ -1,0 +1,10 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="jumbotron">
+    <div class="container">
+        <h1>Ooops, Permission Denied</h1>
+        <p>{{ msg }}</p>
+        <p><a class="btn btn-primary btn-lg" href="{{ redirect }}" role="button">返回</a></p>
+    </div>
+</div>
+{% endblock %}

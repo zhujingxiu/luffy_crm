@@ -35,7 +35,6 @@ class Customer(models.Model):
     date = models.DateField("咨询日期", auto_now_add=True)
     last_consult_date = models.DateField("最后跟进日期", auto_now_add=True)
 
-
     class Meta:
         verbose_name_plural = verbose_name = '客户管理'
 
@@ -168,7 +167,13 @@ class CourseRecord(models.Model):
 class StudyRecord(models.Model):
     course_record = models.ForeignKey(CourseRecord, verbose_name="第几天课程", on_delete=models.CASCADE)
     student = models.ForeignKey(Student, verbose_name="学员", on_delete=models.CASCADE)
-    record_choices = (('signed', "已签到"), ('vacate', "请假"), ('late', "迟到"), ('noshow', "缺勤"), ('leave_early', "早退"),)
+    record_choices = (
+        ('signed', "已签到"),
+        ('vacate', "请假"),
+        ('late', "迟到"),
+        ('noshow', "缺勤"),
+        ('leave_early', "早退"),
+    )
     checking = models.CharField("考勤结果", choices=record_choices, default="signed", max_length=64)
     SCORES = (
         (100, 'A+'),

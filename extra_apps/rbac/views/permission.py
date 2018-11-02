@@ -7,7 +7,6 @@ from django.urls import reverse
 
 from rbac import models
 from rbac.service.routes import get_all_url_dict
-from rbac.service.init_permission import init_permission
 from rbac.forms.permission import MultiPermissionForm, RoleModelForm, MenuModelForm, PermissionModelForm
 
 
@@ -67,7 +66,6 @@ def menu_add(request):
     else:
         form = MenuModelForm(request.POST)
         if form.is_valid():
-            print(form.data)
             form.save()
             return redirect(reverse('rbac:menu_list'))
     return render(request, 'rbac/menu_change.html', {'form': form})
@@ -195,7 +193,7 @@ def multi_permissions(request):
     # 2.1 获取路由系统中所有的URL
     # {'rbac:menu_list':{'url':.... },,,}
     router_dict = get_all_url_dict(ignore_namespace_list=['admin'])
-
+    print(router_dict)
     for row in permissions:
         name = row['name']
         if name in router_dict:
@@ -251,14 +249,12 @@ def distribute_permissions(request):
         if not user:
             return HttpResponse('用户不存在')
         user.roles.set(request.POST.getlist('roles'))
-        init_permission(user, request)
 
     if request.method == 'POST' and request.POST.get('postType') == 'permission' and rid:
         role = models.Role.objects.filter(id=rid).first()
         if not role:
             return HttpResponse('角色不存在')
         role.permissions.set(request.POST.getlist('permissions'))
-        init_permission(user_class.objects.filter(id=uid).first(), request)
 
     user_list = user_class.objects.all()
     # ############################## 角色信息 ##########################

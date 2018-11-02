@@ -2,7 +2,7 @@
 # -*- coding:utf-8 -*-
 # _AUTHOR_  : zhujingxiu
 # _DATE_    : 2018/10/22
-from system.rbac import RbacPermission
+from system.rbac import RbacSiteAdmin
 from service.models import Customer, CustomerInfo
 from service.forms import CustomerForm, CustomerInfoForm, PublicCustomerForm, PrivateCustomerForm
 from xstark.sites import StarkAdminModel, Option, get_choice_text
@@ -14,7 +14,7 @@ from django.utils.safestring import mark_safe
 from django.template.loader import render_to_string
 
 
-class CustomerAdmin(RbacPermission, StarkAdminModel):
+class CustomerAdmin(RbacSiteAdmin):
 
     def display_follow(self, entity=None, header=False):
         if header:
@@ -24,7 +24,15 @@ class CustomerAdmin(RbacPermission, StarkAdminModel):
         <a href='%s?customer=%s' class="btn btn-default"><i class="fa fa-book"></i> 跟进记录</a>
         ''' % (url, entity.pk,))
 
-    list_display = ['name', get_choice_text('gender'), get_choice_text('status'), 'course', get_choice_text('source'), get_choice_text('customerinfo__education'), display_follow]
+    list_display = [
+        'name',
+        get_choice_text('gender'),
+        get_choice_text('status'),
+        'course',
+        get_choice_text('source'),
+        get_choice_text('customerinfo__education'),
+        display_follow
+    ]
     search_list = ['name', 'phone', 'sns']
     filter_list = [
         Option('gender', is_choice=True),
@@ -52,15 +60,20 @@ class CustomerAdmin(RbacPermission, StarkAdminModel):
                 info_form.instance.customer = _customer
                 info_form.save()
                 return redirect(self.reverse_display_list())
-            else:
-                print(form.errors)
+
         return render(request, 'service/customer_set.html', {'form': form, 'info_form': info_form, 'list_url': list_url, 'msg': msg})
 
 
-class PublicCustomerAdmin(RbacPermission, StarkAdminModel):
+class PublicCustomerAdmin(RbacSiteAdmin):
     display_option = False
     has_bulk_delete = False
-    list_display = ['name', 'phone', get_choice_text('gender'), get_choice_text('status'), 'course', get_choice_text('source')]
+    list_display = ['name',
+                    'phone',
+                    get_choice_text('gender'),
+                    get_choice_text('status'),
+                    'course',
+                    get_choice_text('source')
+                    ]
     search_list = ['name', 'phone', 'sns']
     filter_list = [
         Option('gender', is_choice=True),
@@ -68,6 +81,8 @@ class PublicCustomerAdmin(RbacPermission, StarkAdminModel):
         Option('course', is_multi=True),
     ]
     model_form_class = PublicCustomerForm
+
+    StarkAdminModel.bulk_delete.path_name = 'xstark:service_customer_pub_delete'
 
     def extra_urls(self):
         from django.urls import path
@@ -110,7 +125,7 @@ class PublicCustomerAdmin(RbacPermission, StarkAdminModel):
 
         if (privates + len(entities)) > settings.MAX_PRIVATE_CUSTOMER:
             return XStarkErrorResponse('做人别太贪心').json()
-        return XStarkSuccessResponse(tpl=render_to_string('service/action_confirm.html', {
+        return XStarkSuccessResponse(dialog=render_to_string('service/action_confirm.html', {
             'action': reverse('xstark:service_customer_pub_apply'),
             'pks':  ','.join(entities),
             'entities': [item['name'] for item in Customer.objects.filter(pk__in=entities).values('name')],
@@ -118,7 +133,7 @@ class PublicCustomerAdmin(RbacPermission, StarkAdminModel):
         }, request=request), title='将申请以下%s位用户' % len(entities)).json()
 
     bulk_apply_view.text = "申请客户"
-    bulk_apply_view.url = 'xstark:service_customer_pub_apply'
+    bulk_apply_view.path_name = 'xstark:service_customer_pub_apply'
 
     action_list = [bulk_apply_view, ]
 
@@ -126,9 +141,8 @@ class PublicCustomerAdmin(RbacPermission, StarkAdminModel):
         return self.admin_model.objects.filter(consultant__isnull=True)
 
 
-class PrivateCustomerAdmin(RbacPermission, StarkAdminModel):
+class PrivateCustomerAdmin(RbacSiteAdmin):
     display_option = False
-    has_bulk_delete = False
 
     def display_follow(self, entity=None, header=False):
         if header:
@@ -174,7 +188,7 @@ class PrivateCustomerAdmin(RbacPermission, StarkAdminModel):
         :return:
         """
         entities = request.POST.getlist('pk')
-        return XStarkSuccessResponse(tpl=render_to_string('service/action_confirm.html', {
+        return XStarkSuccessResponse(dialog=render_to_string('service/action_confirm.html', {
             'action': reverse('xstark:service_customer_pri_remove'),
             'pks': ','.join(entities),
             'entities': [item['name'] for item in Customer.objects.filter(pk__in=entities).values('name')],
@@ -182,5 +196,6 @@ class PrivateCustomerAdmin(RbacPermission, StarkAdminModel):
         }, request=request), title='将移除以下%s位用户' % len(entities)).json()
 
     bulk_remove_view.text = "移除客户"
+    bulk_remove_view.path_name = 'xstark:service_customer_pri_remove'
 
     action_list = [bulk_remove_view, ]

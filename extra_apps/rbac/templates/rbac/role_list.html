@@ -30,6 +30,8 @@
                 <tr>
                     <th>ID</th>
                     <th>角色名称</th>
+                    <th>角色标识</th>
+                    <th>成员数量</th>
                     <th>权限数量</th>
                     <th> </th>
                 </tr>
@@ -39,6 +41,8 @@
                     <tr>
                         <td>{{ forloop.counter }}</td>
                         <td>{{ item.title }}</td>
+                        <td>{{ item.code }}</td>
+                        <td>{{ item.userinfo_set.count }}</td>
                         <td>{{ item.permissions.count }}</td>
                         <td style="width: 20%;">
                             <a href="{% url 'rbac:role_edit' pk=item.id %}" class="btn btn-default">

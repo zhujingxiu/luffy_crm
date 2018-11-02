@@ -6,13 +6,13 @@ from .forms import ResetPwdForm
 from .models import *
 from xstark.sites import site, StarkAdminModel, Option, get_choice_text
 from xstark.utils.response import XStarkSuccessResponse, XStarkErrorResponse
-from .rbac import RbacPermission
+from .rbac import RbacSiteAdmin
 from django import forms
 from django.conf import settings
 from django.template.loader import render_to_string
 
 
-class DepartAdmin(RbacPermission, StarkAdminModel):
+class DepartAdmin(RbacSiteAdmin):
     list_display = ['title']
 
 
@@ -23,10 +23,10 @@ class UserForm(forms.ModelForm):
     class Meta:
         model = UserInfo
         fields = '__all__'
-        exclude = ['password']
+        exclude = ['password', ]
 
 
-class UserAdmin(RbacPermission, StarkAdminModel):
+class UserAdmin(RbacSiteAdmin):
 
     list_display = ['name', get_choice_text('gender'), 'phone', 'depart', 'roles', 'email']
     model_form_class = UserForm
@@ -52,13 +52,14 @@ class UserAdmin(RbacPermission, StarkAdminModel):
         entities = request.POST.getlist('pk')
         if not request.POST.getlist('pk'):
             return XStarkErrorResponse('请选择一项').json()
-        return XStarkSuccessResponse(tpl=render_to_string('system/reset_pwd.html', {
+        return XStarkSuccessResponse(dialog=render_to_string('system/reset_pwd.html', {
             'action': reverse('xstark:system_userinfo_reset'),
             'form': ResetPwdForm({'pks': ','.join(entities)}),
             'users': UserInfo.objects.filter(pk__in=entities).values('name')
         }, request=request), title='将为%s位用户重置密码' % len(entities)).json()
 
     bulk_reset_view.text = '重置员工默认密码'
+    bulk_reset_view.path_name = 'xstark:system_userinfo_reset'
     action_list = [bulk_reset_view]
     filter_list = [
         Option('gender', is_choice=True),
@@ -71,7 +72,7 @@ class UserAdmin(RbacPermission, StarkAdminModel):
 site.register(UserInfo, UserAdmin)
 
 
-class CollegeAdmin(StarkAdminModel):
+class CollegeAdmin(RbacSiteAdmin):
     list_display = ['title', 'cover', ]
 
 
@@ -84,7 +85,7 @@ class ClassForm(forms.ModelForm):
         exclude = ['admin']
 
 
-class ClassAdmin(StarkAdminModel):
+class ClassAdmin(RbacSiteAdmin):
     list_display = ['title', 'semester','openday', 'tutor', 'college']
 
     filter_list = [
@@ -103,7 +104,7 @@ class ClassAdmin(StarkAdminModel):
 site.register(ClassInfo, ClassAdmin)
 
 
-class CourseAdmin(StarkAdminModel):
+class CourseAdmin(RbacSiteAdmin):
     list_display = ['title', ]
 
 

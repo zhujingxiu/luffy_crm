@@ -337,10 +337,12 @@ class StarkAdminModel(object):
     def get_urls(self):
         from django.urls import path
 
-        urlpatterns = [path('', self.wrapper(self.changelist_view), name=self.get_list_url_name),
-                       path('add/', self.wrapper(self.add_view), name=self.get_add_url_name),
-                       path('<path:entity_id>/delete/', self.wrapper(self.delete_view), name=self.get_del_url_name),
-                       path('<path:entity_id>/change/', self.wrapper(self.change_view), name=self.get_change_url_name), ]
+        urlpatterns = [
+            path('', self.wrapper(self.changelist_view), name=self.get_list_url_name),
+            path('add/', self.wrapper(self.add_view), name=self.get_add_url_name),
+            path('<path:entity_id>/delete/', self.wrapper(self.delete_view), name=self.get_del_url_name),
+            path('<path:entity_id>/change/', self.wrapper(self.change_view), name=self.get_change_url_name),
+        ]
 
         extra_urls = self.extra_urls()
 
@@ -363,7 +365,8 @@ class StarkAdminModel(object):
         display = []
         display.append(StarkAdminModel.display_checkbox)
         display.extend(self.list_display)
-        if StarkAdminModel.display_edit not in display and StarkAdminModel.display_delete not in display and StarkAdminModel.display_option:
+        if StarkAdminModel.display_edit not in display and StarkAdminModel.display_delete \
+                not in display and StarkAdminModel.display_option:
             display.append(StarkAdminModel.display_options)
         return display
 
@@ -385,8 +388,6 @@ class StarkAdminModel(object):
             method_name = request.POST.get('action')
             method_dict = self.get_action_dict()
             if method_name in method_dict:
-                if hasattr(method_name, 'url'):
-                    print(getattr(method_name,'url'))
                 return getattr(self, method_name)(request)
 
         search_list, q, condition = self.get_search_condition(request)
@@ -403,29 +404,26 @@ class StarkAdminModel(object):
         return render(request, 'xstark/changelist.html', context)
 
     def display_add(self):
-        return mark_safe(
-            '<a href="%s" class="btn btn-primary"><i class="fa fa-plus"></i> 添加</a>' % self.reverse_display_add())
+        return mark_safe('<a href="%s" class="btn btn-primary"><i class="fa fa-plus"></i> 添加</a>'
+                         % self.reverse_display_add())
 
     def display_edit(self, entity=None, header=False):
         if header:
             return mark_safe('编辑')
-        return mark_safe(
-            '<a href="%s" class="btn btn-info btn-sm"><i class="fa fa-edit"></i> 编辑</a>' % self.reverse_display_edit(
-                entity=entity))
+        return mark_safe('<a href="%s" class="btn btn-info btn-sm"><i class="fa fa-edit"></i> 编辑</a>'
+                         % self.reverse_display_edit(entity=entity))
 
     def display_delete(self, entity=None, header=False):
         if header:
             return mark_safe('删除')
-        return mark_safe(
-            '<a href="%s" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i> 删除</a>' % self.reverse_display_delete(
-                entity=entity))
+        return mark_safe('<a data-href="%s" class="btn btn-danger btn-sm btn-perm"><i class="fa fa-trash"></i> 删除</a>'
+                         % self.reverse_display_delete(entity=entity))
 
     def display_options(self, entity=None, header=False):
         if header:
             return mark_safe('操作')
-        return mark_safe('''
-            <a href="%s" class="btn btn-info btn-sm"><i class="fa fa-edit"></i> 编辑</a>
-            <a data-href="%s" class="btn btn-danger btn-sm _list-del"><i class="fa fa-trash"></i> 删除</a>
+        return mark_safe('''<a href="%s" class="btn btn-info btn-sm"><i class="fa fa-edit"></i> 编辑</a>
+            <a data-href="%s" class="btn btn-danger btn-sm btn-perm"><i class="fa fa-trash"></i> 删除</a>
             ''' % (self.reverse_display_edit(entity=entity), self.reverse_display_delete(entity=entity)))
 
     def reverse_display_list(self):
@@ -513,7 +511,6 @@ class StarkAdminModel(object):
         form = self.get_form_instance(request=request)
         if request.method == 'POST':
             form = self.get_form_instance(data=request.POST, request=request)
-
             if form.is_valid():
                 self.save(form)
                 return redirect(self.reverse_display_list())
@@ -554,7 +551,7 @@ class StarkAdminModel(object):
             entity.delete()
             return XStarkSuccessResponse('{%s} 已删除' % entity, redirect=link).json()
         return XStarkSuccessResponse(title='删除%s' % self.get_site_title(),
-                                     tpl=render_to_string('xstark/delete.html', {'redirect': link, 'entity': entity},
+                                     dialog=render_to_string('xstark/delete.html', {'redirect': link, 'entity': entity},
                                                           request=request)).json()
 
 
@@ -567,7 +564,8 @@ class StarkAdminSite(object):
 
     def get_urls(self):
         from django.urls import path, include
-        urlpatterns = []
+        urlpatterns = [
+        ]
         for item in self._registry:
             if item.prefix:
                 tmp = path('%s/%s/%s/' % (item.model._meta.app_label, item.model._meta.model_name, item.prefix),

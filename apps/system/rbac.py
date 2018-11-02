@@ -7,15 +7,28 @@ from django.conf import settings
 from xstark.sites import StarkAdminModel
 
 
-class RbacPermission(object):
+class RbacSiteAdmin(StarkAdminModel):
+    '''
+    若作为独立组件，最好不直接继承xstark组件的StarkAdminModel，从而使得耦合度增加
+    但此处要覆盖的授权操作函数皆是xstark组件的方法：display_add，get_list_display，get_action_list，...，而非独立的自定义方法
+    所以此处直接继承了StarkAdminModel
+    '''
 
     def display_add(self):
+        '''
+        模型实例添加按钮权限
+        :return:
+        '''
         name = "%s:%s" % (self.admin_site.namespace, self.get_add_url_name,)
         permission_dict = self.request.session.get(settings.PERMISSION_SESSION_KEY)
         if name in permission_dict:
             return super().display_add()
 
     def get_list_display(self):
+        '''
+        模型实例列表中编辑删除权限
+        :return:
+        '''
         _list_display = super().get_list_display()
         permission_dict = self.request.session.get(settings.PERMISSION_SESSION_KEY)
         edit_name = "%s:%s" % (self.admin_site.namespace, self.get_change_url_name,)
@@ -35,14 +48,15 @@ class RbacPermission(object):
         return _list_display
 
     def get_action_list(self):
-        _action_list = [{'name': action.__name__, 'action': action, 'url': action.url if hasattr(action, 'url') else ''} for action in super().get_action_list()]
+        '''
+        模型实例批量操作权限
+        :return:
+        '''
+        _action_list = [{'action': action, 'path_name': action.path_name if hasattr(action, 'path_name') else ''}
+                        for action in super().get_action_list()]
         permission_dict = self.request.session.get(settings.PERMISSION_SESSION_KEY)
-        del_name = "%s:%s" % (self.admin_site.namespace, self.get_del_url_name,)
-        if del_name not in permission_dict:
-            pass
-            #_action_list.remove(StarkAdminModel.bulk_delete)
+        actions = []
         for _action in _action_list:
-            if _action['url'] not in permission_dict:
-                print('not in ', _action, _action_list)
-                #_action_list.remove()
-        return super().get_action_list()
+            if _action['path_name'] and _action['path_name'] in permission_dict:
+                actions.append(_action['action'])
+        return actions

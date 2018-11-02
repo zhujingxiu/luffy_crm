@@ -7,12 +7,12 @@ from django.http import JsonResponse
 
 
 class XStarkResponse(object):
-    def __init__(self, errcode, msg='', title='', data=None, tpl=None, redirect=None):
+    def __init__(self, errcode, msg='', title='', data=None, dialog=None, redirect=None):
         self.errcode = errcode
         self.msg = msg
         self.title = title
         self.data = data
-        self.tpl = tpl
+        self.dialog = dialog
         self.redirect = redirect
 
     def json(self):
@@ -21,16 +21,16 @@ class XStarkResponse(object):
             'msg': self.msg,
             'title': self.title,
             'data': self.data,
-            'tpl': self.tpl,
+            'dialog': self.dialog,
             'redirect': self.redirect,
         }, safe=True)
 
 
 class XStarkSuccessResponse(XStarkResponse):
-    def __init__(self, msg='', title='', data=None, tpl=None, redirect=None):
-        super().__init__(0, msg, title or '操作成功', data, tpl, redirect)
+    def __init__(self, msg='', title='', data=None, dialog=None, redirect=None):
+        super().__init__(0, msg, title or '操作成功', data, dialog, redirect)
 
 
 class XStarkErrorResponse(XStarkResponse):
-    def __init__(self, msg='', title='', data=None, tpl=None, redirect=None):
-        super().__init__(1, msg, title or '操作失败', data, tpl, redirect)
+    def __init__(self, msg='', title='', data=None, dialog=None, redirect=None):
+        super().__init__(1, msg, title or '操作失败', data, dialog, redirect)
